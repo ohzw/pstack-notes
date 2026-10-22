@@ -4,18 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pstack notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* palette: ayu Light / ayu Dark。各ページと同じトークン */
 :root{--ground:#EBEEF0;--card:#FCFCFC;--ink:#474C52;--muted:#626A75;--opus:rgba(250,133,50,.14);--opus-i:#7E4B01;--sel:#035BD6;
-  --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;--serif:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;--mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"IBM Plex Sans JP",system-ui,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,monospace;
   --ring:0 0 0 1px oklch(0 0 0 / .08),0 1px 2px -1px oklch(0 0 0 / .08),0 2px 4px 0 oklch(0 0 0 / .05)}
 @media (prefers-color-scheme:dark){:root{--ground:#0D1017;--card:#141821;--ink:#BFBDB6;--muted:#8A909C;--opus:rgba(255,143,64,.12);--opus-i:#FF8F40;--sel:#73B8FF;--ring:0 0 0 1px oklch(1 0 0 / .1)}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:880px;margin:0 auto;padding:56px 24px 96px;display:grid;gap:28px}
 .kicker{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
-h1{font-size:34px;line-height:1.2;font-weight:800;margin:6px 0 10px}
-.lead{font-family:var(--serif);font-size:16px;line-height:1.75;color:var(--muted);margin:0;max-width:62ch;text-wrap:pretty}
+h1{font-size:34px;line-height:1.2;font-weight:700;margin:6px 0 10px}
+.lead{font-size:16px;line-height:1.75;color:var(--muted);margin:0;max-width:62ch;text-wrap:pretty}
 .docs{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .docs a{display:grid;gap:6px;padding:16px 18px;border-radius:12px;background:var(--card);box-shadow:var(--ring);color:inherit;text-decoration:none;transition:box-shadow 150ms ease-out}
 .docs a:hover{box-shadow:0 0 0 1px var(--sel)}
