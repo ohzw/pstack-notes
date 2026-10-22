@@ -2,6 +2,8 @@
 
 Cursor プラグイン [pstack](https://github.com/cursor/plugins/tree/main/pstack) の理解を深めるためにまとめた図解資料です。
 
+**公開ページ: https://ohzw.github.io/pstack-notes/**
+
 | ファイル | 内容 |
 | --- | --- |
 | [`index.html`](index.html) | 目次 |
