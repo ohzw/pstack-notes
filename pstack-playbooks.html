@@ -47,6 +47,8 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
 header{display:grid;gap:14px;max-width:880px}
 .kicker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
 .kicker .tag-doc{color:var(--opus-i);background:var(--opus);border-radius:4px;padding:2px 8px;letter-spacing:.04em}
+.kicker .home{color:inherit;text-decoration:none;letter-spacing:.04em}
+.kicker .home:hover{color:var(--ink)}
 h1{font-size:34px;line-height:1.2;font-weight:800;letter-spacing:-.01em;margin:0;text-wrap:balance}
 h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--muted);letter-spacing:0;word-break:keep-all;overflow-wrap:anywhere}
 .lead{font-family:var(--serif);font-size:16px;line-height:1.75;color:var(--muted);margin:0;max-width:62ch}
@@ -172,7 +174,7 @@ h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker"><span class="tag-doc">参考資料</span><span>Cursor プラグイン · cursor/plugins · poteto-mode/playbooks</span></div>
+  <div class="kicker"><a class="home" href="index.html">← 目次</a><span class="tag-doc">参考資料</span><span>Cursor プラグイン · cursor/plugins · poteto-mode/playbooks</span></div>
   <h1>pstack のプレイブック<span class="sub">23 本に共通する 5 つの部品と、繰り返し出てくる 7 つの考え方</span></h1>
   <p class="lead"><strong>プレイブック</strong>は、作業の種類ごとに「何に責任を持つか」「どの道具をどの順で呼ぶか」「どの関門を通れば終わりか」だけを書いた短い手順書です。判断の理由は原則に、やり方は他のスキルに任せています。プレイブックはそれらを呼ぶ順番を決める配線図なので、1 本が短く済みます。</p>
   <ul class="facts" aria-label="規模">
