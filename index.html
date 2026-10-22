@@ -34,14 +34,14 @@ h1{font-size:34px;line-height:1.2;font-weight:800;margin:6px 0 10px}
 <header>
   <div class="kicker">Cursor プラグイン · cursor/plugins</div>
   <h1>pstack notes</h1>
-  <p class="lead">Cursor プラグイン pstack の中身を読み解くためにまとめた図解です。全体構成を見てから、プレイブックの共通形に進むと読みやすい順番になっています。</p>
+  <p class="lead">Cursor プラグイン pstack の中身を読み解くためにまとめた図解です。上から順に読むと、全体構成、プレイブックと並列起動スキルの関係、プレイブックの共通形、レビュー体制の順に、全体から細部へ進めます。</p>
 </header>
-<ul class="docs">
-  <li><a href="pstack-skeleton.html"><span class="tag">構成図</span><b>pstack の全体構成</b><span>1 つのルーター、23 のプレイブック、サブエージェントを並列起動する 9 つのスキルを「振り分け → 手順 → 並列化 → 適用 → 出荷」の 5 段で示す。項目を押すと参照関係を表示。</span><code>pstack-skeleton.html</code></a></li>
-  <li><a href="pstack-playbooks.html"><span class="tag">参考資料</span><b>pstack のプレイブック</b><span>23 本に共通する 5 つの部品と、繰り返し出てくる 7 つの考え方。受け渡しの流れと 1 本の大きさも並べる。</span><code>pstack-playbooks.html</code></a></li>
-  <li><a href="pstack-playbook-fanout.html"><span class="tag">解説</span><b>プレイブックと fan out</b><span>作業手順書と、pstack が fan out と呼ぶサブエージェントの並列起動の関係。feature の手順が呼ぶスキル、並列起動する 9 つのスキルの並列化と集約の方法、orchestrate との違いを並べる。</span><code>pstack-playbook-fanout.html</code></a></li>
-  <li><a href="pstack-review.html"><span class="tag">参考資料</span><b>pstack のレビュー体制</b><span>仕上げ・敵対レビュー・Babysit・独立検証・着地の 5 段について、いつ動かし、何を満たせば通るかを並べる。ボット指摘の仕分けと、合格に数えないものの一覧も載せる。</span><code>pstack-review.html</code></a></li>
-</ul>
+<ol class="docs">
+  <li><a href="pstack-skeleton.html"><span class="tag">1 · 構成図</span><b>pstack の全体構成</b><span>1 つのルーター、23 のプレイブック、サブエージェントを並列起動する 9 つのスキルを「振り分け → 手順 → 並列化 → 適用 → 出荷」の 5 段で示す。項目を押すと参照関係を表示。</span><code>pstack-skeleton.html</code></a></li>
+  <li><a href="pstack-playbook-fanout.html"><span class="tag">2 · 解説</span><b>プレイブックと fan out</b><span>作業手順書と、pstack が fan out と呼ぶサブエージェントの並列起動の関係。feature の手順が呼ぶスキル、並列起動する 9 つのスキルの並列化と集約の方法、orchestrate との違いを並べる。</span><code>pstack-playbook-fanout.html</code></a></li>
+  <li><a href="pstack-playbooks.html"><span class="tag">3 · 参考資料</span><b>pstack のプレイブック</b><span>23 本に共通する 5 つの部品と、繰り返し出てくる 7 つの考え方。受け渡しの流れと 1 本の大きさも並べる。</span><code>pstack-playbooks.html</code></a></li>
+  <li><a href="pstack-review.html"><span class="tag">4 · 参考資料</span><b>pstack のレビュー体制</b><span>仕上げ・敵対レビュー・Babysit・独立検証・着地の 5 段について、いつ動かし、何を満たせば通るかを並べる。ボット指摘の仕分けと、合格に数えないものの一覧も載せる。</span><code>pstack-review.html</code></a></li>
+</ol>
 <p class="note">出典: <a href="https://github.com/cursor/plugins/tree/main/pstack">cursor/plugins/pstack</a>（2026-10 時点の main）。内容の解釈部分は各ページに明記しています。</p>
 </div>
 </body>

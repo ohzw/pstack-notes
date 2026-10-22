@@ -8,8 +8,8 @@ Cursor プラグイン [pstack](https://github.com/cursor/plugins/tree/main/psta
 | --- | --- |
 | [`index.html`](index.html) | 目次 |
 | [`pstack-skeleton.html`](pstack-skeleton.html) | 全体構成図。ルーター・23 プレイブック・並列起動スキル・葉スキルと原則・出荷の 5 段。項目を押すと参照関係を表示 |
-| [`pstack-playbooks.html`](pstack-playbooks.html) | プレイブック 23 本に共通する 5 つの部品と 7 つの考え方 |
 | [`pstack-playbook-fanout.html`](pstack-playbook-fanout.html) | プレイブックと fan out（サブエージェントの並列起動）の関係。並列起動スキルに共通する 4 段、9 スキルの並列化と集約の方法、orchestrate との違い |
+| [`pstack-playbooks.html`](pstack-playbooks.html) | プレイブック 23 本に共通する 5 つの部品と 7 つの考え方 |
 | [`pstack-review.html`](pstack-review.html) | レビュー体制。5 段の検査の起動条件と合格基準、/interrogate、Bugbot の仕分け、独立検証の判定 |
 
 ## 見方
