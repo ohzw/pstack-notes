@@ -165,14 +165,14 @@ h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--
 <header>
   <div class="kicker"><a class="home" href="index.html">← 目次</a><span class="tag-doc">解説</span><span>Cursor プラグイン · cursor/plugins · pstack</span></div>
   <h1>プレイブックと fan out<span class="sub">作業手順書と、サブエージェントの並列起動</span></h1>
-  <p class="lead">pstack では、依頼を受けたチャットがまず<strong>プレイブック</strong>を 1 本選び、その手順に沿って作業を進めます。手順の一部はサブエージェントを並列に起動して結果を集約する作業で、pstack の本文はこの動作を <strong>fan out</strong> と呼びます。fan out を受け持つのは how や swarm などの普通のスキルです。プレイブックが「何を、どの順で、どこで合格とするか」を決め、これらのスキルがそのうちの 1 手順を並列に実行します。</p>
+  <p class="lead">pstack では、依頼を受けたチャットがまず<strong>プレイブック</strong>を 1 本選び、その手順に沿って作業を進めます。手順の一部は、サブエージェントを並列に起動して結果を集約する <strong>fan out</strong> です。これは how や swarm などのスキルが受け持ちます。プレイブックが「何を、どの順で、どこで合格とするか」を決め、これらのスキルがそのうちの 1 手順を並列に実行します。</p>
   <ul class="facts" aria-label="規模">
     <li><b>23</b><span>プレイブック</span></li>
-    <li><b>9</b><span>並列起動スキル（この資料の分類）</span></li>
+    <li><b>9</b><span>並列起動スキル</span></li>
     <li><b>4</b><span>並列起動スキルに共通の段</span></li>
     <li><b>1</b><span>起動に使うメッセージ</span></li>
   </ul>
-  <div class="meta"><a href="https://github.com/cursor/plugins/tree/main/pstack">cursor/plugins/pstack</a><span>2026-10-22 時点の main（d1453c1）を読んで作成</span><span>「並列起動スキル」という括り、4 段の図、最後のまとめは本文からの解釈</span></div>
+  <div class="meta"><a href="https://github.com/cursor/plugins/tree/main/pstack">cursor/plugins/pstack</a><span>2026-10-22 時点の main（d1453c1）を読んで作成</span><span>9 スキルの分類、4 段の図、最後のまとめは本文からの解釈</span></div>
 </header>
 <div class="toolbar">
   <div class="legend"><span>小さな等幅の文字は出典のファイル名</span></div>
@@ -188,10 +188,10 @@ h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--
           <div class="pf-k">書かないこと</div>
           <p>判断の根拠は原則（<code>principle-*</code> スキル）に、個々の作業のやり方は how や architect などのスキルに任せます。プレイブックに書くのは、それらを呼ぶ順序と通過条件だけです。このため 1 本は短く、23 本の中央値は 2.4 KB です。</p>
         </div>
-        <div class="box blue"><h3>fan out<small>pstack の本文で使う動詞・名詞</small></h3>
-          <p class="pf-def">サブエージェントを並列に起動し、返ってきた結果を集約することを指す言葉です。swarm の description（Fan out N parallel workers…）、arena と swarm の段の名前（<code>Phase B: Fan out</code>）、feature の「Gates run before fan-out」のように使われます。スキルの種類やまとまりの名前ではありません。</p>
+        <div class="box blue"><h3>fan out<small>サブエージェントの並列起動</small></h3>
+          <p class="pf-def">サブエージェントを並列に起動し、返ってきた結果を集約する動作です。swarm と arena には <code>Phase B: Fan out</code> という段があります。</p>
           <div class="pf-k">担うスキル</div>
-          <p>fan out を手順に含むのは、how、why、arena、swarm などの普通のスキル（SKILL.md）です。親チャットが複数のサブエージェントを 1 つのメッセージで並行起動し、結果は集約役（how の explainer、why の synthesizer、arena では親自身）が 1 つにまとめて呼び出し元へ返します。このページでは、これらを「並列起動スキル」と呼びます。この呼び方は pstack のものではなく、この資料での呼び方です。</p>
+          <p>fan out を手順に含むのは、how、why、arena、swarm などのスキルです。親チャットが複数のサブエージェントを 1 つのメッセージで並行起動し、結果は集約役（how の explainer、why の synthesizer、arena では親自身）が 1 つにまとめて呼び出し元へ返します。このページでは、これらを「並列起動スキル」と呼びます。</p>
         </div>
       </div>
       <p>プレイブックの手順の 1 つが並列起動スキルを呼びます。そのスキルは終わると答えを 1 つ返し、プレイブックは次の手順に進みます。</p>
@@ -253,13 +253,13 @@ h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--
 </svg>
         <figcaption>図 1　feature プレイブックの手順と、そこから呼ばれる並列起動スキル。architect は内部で how・why と arena をさらに呼ぶ。</figcaption>
       </figure>
-      <p>ルーターの常時トリガーも同じスキルを呼びます。関数の境界を越えるコードには <code>architect</code>、並列の網羅や競争には <code>swarm</code>、設計の比べ合わせには <code>arena</code>、争点のある設計には <code>interrogate</code> を使います。このうち swarm と arena の行は「Parallel fan-out → the swarm skill …」と書かれています。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">SKILL.md</a>　プレイブックの中身は <a href="pstack-playbooks.html">pstack のプレイブック</a> で詳しく扱っています。</p>
+      <p>ルーターの常時トリガーも同じスキルを呼びます。関数の境界を越えるコードには <code>architect</code>、並列の網羅や競争には <code>swarm</code>、設計の比べ合わせには <code>arena</code>、争点のある設計には <code>interrogate</code> を使います。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">SKILL.md</a>　プレイブックの中身は <a href="pstack-playbooks.html">pstack のプレイブック</a> で詳しく扱っています。</p>
     </div>
   </section>
 
   <section class="row wide" aria-labelledby="pf-r3"><div class="rail" id="pf-r3">3 FAN OUT<span class="jp">並列実行と集約</span><span class="add">図は解釈</span></div>
     <div class="pf-body">
-      <p>pstack の本文では、「fan out」は段の名前や動詞として出てきます。arena と swarm には <code>Phase B: Fan out</code> という段があり、ガイドには how について「大きなサブシステムでは explorer を 2〜4 体 fan out する」と書かれています。recall、orchestrate、autopilot-full などの本文にも同じ意味で出てきます。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/swarm/SKILL.md">SKILL.md</a> <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/arena/SKILL.md">SKILL.md</a> <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/docs/guide/03-understand.md">03-understand.md</a>　どの並列起動スキルもおおむね次の 4 段で動きます。</p>
+      <p>どの並列起動スキルも、おおむね次の 4 段で動きます。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/swarm/SKILL.md">SKILL.md</a></p>
       <figure class="pf-fig">
 <svg viewBox="0 0 1000 300" role="img" aria-labelledby="pf-b-title pf-b-desc">
 <title id="pf-b-title">並列起動スキルに共通する 4 段</title>
@@ -317,7 +317,7 @@ h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--
 
   <section class="row wide" aria-labelledby="pf-r4"><div class="rail" id="pf-r4">4 CATALOG<span class="jp">9 つのスキル</span><span class="add">分類は解釈</span></div>
     <div class="pf-body">
-      <p>pstack の本文は、これらのスキルを 1 つの括りとして扱っていません。名前を付けてまとめているのは poteto-mode の「Routed workflow skills」だけで、how、why、interrogate、reflect、swarm の 5 つです。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">SKILL.md</a>　ここでは、<a href="pstack-skeleton.html">全体構成図</a>の「3 FAN OUT」の段と同じく、それに architect、arena、teach、figure-it-out を加えた 9 つを並べます。人数とモデルは既定値です。</p>
+      <p>pstack 自身が名前を付けてまとめているのは、poteto-mode の「Routed workflow skills」の 5 つ（how、why、interrogate、reflect、swarm）です。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">SKILL.md</a>　ここでは、<a href="pstack-skeleton.html">全体構成図</a>の「3 FAN OUT」の段と同じく、それに architect、arena、teach、figure-it-out を加えた 9 つを並べます。人数とモデルは既定値です。</p>
       <div class="pf-tw"><table class="pf-t">
         <tr><th>スキル</th><th>用途</th><th>並列に動かす役</th><th>集約の方法</th></tr>
         <tr><td><code>how</code></td><td>仕組みの説明</td><td>小さな問いなら explainer 1 体のみ。大きなサブシステムでは、切り口ごとに読み取り専用の explorer を 2〜4 体（grok）</td><td>explainer 1 体（opus）が概要・仕組み・場所・落とし穴の形にまとめる <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/how/SKILL.md">SKILL.md</a></td></tr>
@@ -335,7 +335,7 @@ h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--
 
   <section class="row wide" aria-labelledby="pf-r5"><div class="rail" id="pf-r5">5 VS ORCHESTRATE<span class="jp">指示書との違い</span></div>
     <div class="pf-body">
-      <p>並列起動スキルもサブエージェントへの指示書の一種です。ただし、汎用のオーケストレーションとは役目が違います。pstack で「何日も続く計画を、常駐する 1 つのチャットが多数のサブエージェントで回す」のは <code>orchestrate</code> プレイブックの仕事です。orchestrate の本文も fan-out という言葉を使うので、両者は言葉ではなく、置き場所と続く長さで区別します。</p>
+      <p>並列起動スキルもサブエージェントへの指示書の一種です。ただし、汎用のオーケストレーションとは役目が違います。pstack で「何日も続く計画を、常駐する 1 つのチャットが多数のサブエージェントで回す」のは <code>orchestrate</code> プレイブックの仕事です。</p>
       <div class="pf-tw"><table class="pf-t">
         <tr><th></th><th>並列起動スキル（how · swarm · arena …）</th><th>orchestrate プレイブック</th></tr>
         <tr><td>置き場所</td><td>スキル。プレイブックの手順やルーターの常時トリガーから呼ぶ</td><td>プレイブック。ルーターが「1 回の会話では終わらない計画」と判断した時に選ぶ</td></tr>
@@ -355,9 +355,9 @@ h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--
     </div>
   </section>
 
-  <p class="pf-sum"><strong>一言で。</strong>プレイブックは「何を、どの順で、どこで合格とするか」を決める手順書で、実体は poteto-mode に付属する Markdown です。fan out は、サブエージェントを並列に起動して結果を集約する動作を指す pstack の言葉です。how や swarm などの普通のスキルがこの動作を手順に含み、プレイブックの 1 手順として 1 回の呼び出しで完結させます。複数日にわたる作業の割り振りは orchestrate が受け持ちます。<span class="add">解釈</span></p>
+  <p class="pf-sum"><strong>一言で。</strong>プレイブックは「何を、どの順で、どこで合格とするか」を決める手順書で、実体は poteto-mode に付属する Markdown です。how や swarm などのスキルはサブエージェントを並列に起動して結果を集約し（fan out）、プレイブックの 1 手順を 1 回の呼び出しで完結させます。複数日にわたる作業の割り振りは orchestrate が受け持ちます。<span class="add">解釈</span></p>
 </main>
-<p class="note">「並列起動スキル」という呼び方と 9 つという数え方はこの資料の分類で、pstack の本文にこの括りはありません。automate-me や maintain-verification-skill もサブエージェントを並列に使いますが、このページでは扱っていません。</p>
+<p class="note">automate-me や maintain-verification-skill もサブエージェントを並列に使いますが、このページでは扱っていません。</p>
 </div>
 <script>
 const tb=document.getElementById('pf-theme'),modes=['auto','light','dark'],lbl={auto:'自動',light:'ライト',dark:'ダーク'};let m=0;
