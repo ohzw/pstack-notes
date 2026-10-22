@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pstack のプレイブックと fan out</title>
+<style>
+/* palette: ayu Light / ayu Dark (npm ayu 9.1.0). pstack-skeleton.html と同じトークン。--accent だけこのページで追加 */
+:root{
+  --ground:#EBEEF0; --card:#FCFCFC; --ink:#474C52; --muted:#626A75; --line:rgba(107,125,143,.24); --soft:#F3F4F5;
+  --amber:rgba(242,151,24,.12); --amber-b:rgba(242,151,24,.6); --blue:rgba(34,164,230,.1); --blue-b:rgba(34,164,230,.42); --pink:rgba(163,122,204,.1); --pink-b:rgba(163,122,204,.6);
+  --sel:#035BD6; --on-sel:#FFFFFF; --sel-soft:rgba(3,91,214,.12); --grok:rgba(134,179,0,.14); --grok-i:#4F6900; --opus:rgba(250,133,50,.14); --opus-i:#7E4B01;
+  --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  --serif:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --ring:0 0 0 1px oklch(0 0 0 / .08),0 1px 2px -1px oklch(0 0 0 / .08),0 2px 4px 0 oklch(0 0 0 / .05);
+  --float:0 8px 28px rgba(107,125,143,.24);
+}
+@media (prefers-color-scheme:dark){:root{
+  --ground:#0D1017; --card:#141821; --ink:#BFBDB6; --muted:#8A909C; --line:#262C38; --soft:#10141C;
+  --amber:rgba(230,180,80,.1); --amber-b:rgba(230,180,80,.55); --blue:rgba(89,194,255,.08); --blue-b:rgba(89,194,255,.4); --pink:rgba(210,166,255,.08); --pink-b:rgba(210,166,255,.45);
+  --sel:#73B8FF; --on-sel:#0D1017; --sel-soft:rgba(115,184,255,.18); --grok:rgba(170,217,76,.12); --grok-i:#AAD94C; --opus:rgba(255,143,64,.12); --opus-i:#FF8F40;
+  --ring:0 0 0 1px oklch(1 0 0 / .1);
+  --float:0 8px 28px rgba(0,0,0,.5);
+}}
+:root[data-theme="light"]{
+  --ground:#EBEEF0; --card:#FCFCFC; --ink:#474C52; --muted:#626A75; --line:rgba(107,125,143,.24); --soft:#F3F4F5;
+  --amber:rgba(242,151,24,.12); --amber-b:rgba(242,151,24,.6); --blue:rgba(34,164,230,.1); --blue-b:rgba(34,164,230,.42); --pink:rgba(163,122,204,.1); --pink-b:rgba(163,122,204,.6);
+  --sel:#035BD6; --on-sel:#FFFFFF; --sel-soft:rgba(3,91,214,.12); --grok:rgba(134,179,0,.14); --grok-i:#4F6900; --opus:rgba(250,133,50,.14); --opus-i:#7E4B01;
+  --ring:0 0 0 1px oklch(0 0 0 / .08),0 1px 2px -1px oklch(0 0 0 / .08),0 2px 4px 0 oklch(0 0 0 / .05);
+  --float:0 8px 28px rgba(107,125,143,.24);
+}
+:root[data-theme="dark"]{
+  --ground:#0D1017; --card:#141821; --ink:#BFBDB6; --muted:#8A909C; --line:#262C38; --soft:#10141C;
+  --amber:rgba(230,180,80,.1); --amber-b:rgba(230,180,80,.55); --blue:rgba(89,194,255,.08); --blue-b:rgba(89,194,255,.4); --pink:rgba(210,166,255,.08); --pink-b:rgba(210,166,255,.45);
+  --sel:#73B8FF; --on-sel:#0D1017; --sel-soft:rgba(115,184,255,.18); --grok:rgba(170,217,76,.12); --grok-i:#AAD94C; --opus:rgba(255,143,64,.12); --opus-i:#FF8F40;
+  --ring:0 0 0 1px oklch(1 0 0 / .1);
+  --float:0 8px 28px rgba(0,0,0,.5);
+}
+/* ここから pstack-skeleton.html と同じ定義 */
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.lead,.box p,.ds,.note{text-wrap:pretty}
+.box h3{text-wrap:balance}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+.wrap{max-width:1320px;margin:0 auto;padding:40px 28px 120px;display:grid;gap:24px}
+header{display:grid;gap:14px;max-width:880px}
+.kicker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.kicker .tag-doc{color:var(--opus-i);background:var(--opus);border-radius:4px;padding:2px 8px;letter-spacing:.04em}
+.kicker .home{color:inherit;text-decoration:none;letter-spacing:.04em}
+.kicker .home:hover{color:var(--ink)}
+h1{font-size:34px;line-height:1.2;font-weight:800;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--muted);letter-spacing:0;word-break:keep-all;overflow-wrap:anywhere}
+.lead{font-family:var(--serif);font-size:16px;line-height:1.75;color:var(--muted);margin:0;max-width:62ch}
+.lead strong{color:var(--ink);font-weight:600}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.facts li{display:grid;gap:0;padding:8px 14px;border-radius:10px;background:var(--card);box-shadow:var(--ring);min-width:108px}
+.facts b{font-size:22px;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--ink)}
+.facts span{font-size:11.5px;color:var(--muted)}
+.meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.meta a{color:inherit}
+.toolbar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);align-items:center}
+.themebtn{font:inherit;font-size:12px;color:var(--ink);background:var(--card);border:0;box-shadow:var(--ring);border-radius:6px;padding:4px 10px;cursor:pointer;position:relative;transition-property:scale;transition-duration:150ms;transition-timing-function:ease-out}
+.themebtn:active{scale:.96}
+.themebtn::after{content:"";position:absolute;inset:min(0px,calc(50% - 20px))}
+.board{background:var(--card);box-shadow:var(--ring);border-radius:14px;padding:28px 28px 20px;display:grid;gap:0}
+.row{display:grid;grid-template-columns:116px 1fr;gap:20px;align-items:start}
+.rail{padding-top:14px;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted);display:grid;gap:2px}
+.rail .jp{letter-spacing:.02em;font-weight:500;font-size:12px}
+.conn{display:grid;grid-template-columns:116px 1fr;gap:20px;height:34px}
+.conn div{display:flex;align-items:center;gap:8px;padding-left:24px;font-size:11px;color:var(--muted);position:relative}
+.conn div::before{content:"";width:1px;height:100%;background:var(--muted);position:absolute;left:18px;top:0}
+.conn div::after{content:"";position:absolute;left:14px;bottom:0;border:4px solid transparent;border-top:6px solid var(--muted)}
+.box{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--card);display:grid;gap:10px;align-content:start}
+.box h3{margin:0;font-size:15px;font-weight:700}
+.box p{margin:0;color:var(--muted);font-size:12.5px}
+.box.amber{background:var(--amber);border-color:var(--amber-b)}
+.box.blue{background:var(--blue);border-color:var(--blue-b)}
+.box.pink{background:var(--pink);border-color:var(--pink-b)}
+.box code{font-family:var(--mono);font-size:12px}
+.steps{column-count:3;column-gap:16px}
+.pbg{break-inside:avoid;display:grid;gap:0;padding-bottom:12px}
+.pbg h4{margin:0 0 6px;font-size:12px;font-weight:700;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pbg h4 small{font-weight:400;color:var(--muted);font-size:11px}
+.chips{display:grid;gap:6px}
+.chip{display:grid;gap:1px;padding:6px 10px;box-shadow:var(--ring);background:var(--card);border-radius:8px}
+.chip .nm{font-family:var(--mono);font-size:12.5px;font-weight:600}
+.chip .ds{font-size:11.5px;color:var(--muted);line-height:1.4}
+.mini{font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:999px;white-space:nowrap;box-shadow:var(--ring);background:var(--card)}
+.minis{display:flex;flex-wrap:wrap;gap:6px}
+.add{justify-self:start;font-size:10px;letter-spacing:.06em;color:var(--muted);border:1px dashed var(--line);border-radius:4px;padding:0 5px;font-weight:500}
+.note{font-size:12px;color:var(--muted);max-width:90ch;margin:0}
+/* ここからこのページ固有（pf- で始まる） */
+:root{--accent:#A85C00}
+@media (prefers-color-scheme:dark){:root{--accent:#E6B450}}
+:root[data-theme="light"]{--accent:#A85C00}
+:root[data-theme="dark"]{--accent:#E6B450}
+.row.wide{grid-template-columns:1fr;gap:10px}
+.row.wide .rail{padding-top:0;grid-auto-flow:column;justify-content:start;align-items:baseline;gap:10px}
+.row + .row{margin-top:28px;padding-top:24px;border-top:1px solid var(--line)}
+.pf-body{display:grid;gap:14px;min-width:0}
+.pf-body > p{margin:0;font-size:13px;max-width:78ch;text-wrap:pretty}
+.pf-body p code,.pf-t code,.pf-l code{font-family:var(--mono);font-size:11.5px}
+.pf-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pf-two .box{gap:8px}
+.pf-two .box h3{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pf-two .box h3 small{font-weight:400;font-size:11px;color:var(--muted)}
+.pf-def{margin:0;font-size:13.5px;line-height:1.6;color:var(--ink)!important}
+.pf-k{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.pf-fig{margin:0;overflow-x:auto}
+.pf-fig svg{display:block;width:100%;height:auto;min-width:880px}
+.pf-fig figcaption{font-size:12px;color:var(--muted);margin:6px 0 0}
+.pf-fig .n{fill:var(--card);stroke:var(--muted);stroke-opacity:.75;stroke-width:1}
+.pf-fig .n.call{stroke:var(--ink);stroke-opacity:1;stroke-width:1.2}
+.pf-fig .n.f{fill:var(--amber);stroke:var(--accent);stroke-opacity:1;stroke-width:1.2}
+.pf-fig .n.w{fill:var(--blue);stroke:var(--blue-b);stroke-opacity:1}
+.pf-fig .num{fill:var(--soft);stroke:var(--muted);stroke-opacity:.6}
+.pf-fig .cn{font-family:var(--mono);font-size:11px;font-weight:600;fill:var(--ink)}
+.pf-fig .ey{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.14em;fill:var(--muted)}
+.pf-fig .nt{font-family:var(--sans);font-size:13px;font-weight:700;fill:var(--ink)}
+.pf-fig .nm{font-family:var(--mono);font-size:13px;font-weight:700;fill:var(--ink)}
+.pf-fig .ns{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.pf-fig .nj{font-family:var(--sans);font-size:12px;fill:var(--muted)}
+.pf-fig .sj{font-family:var(--sans);font-size:13px;fill:var(--ink)}
+.pf-fig .sj.dim{fill:var(--muted)}
+.pf-fig .e{stroke:var(--muted);stroke-width:1.2;fill:none}
+.pf-fig .mk{fill:var(--muted)}
+.pf-fig .lt{font-family:var(--sans);font-size:12px;fill:var(--muted)}
+.pf-fig .rule{stroke:var(--line);stroke-width:1}
+.pf-rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.pf-rules .box{gap:6px;padding:12px 14px}
+.pf-rules .box h3{font-size:13.5px}
+.pf-rules .box p{font-size:12.5px}
+.pf-t{border-collapse:collapse;width:100%;font-size:12.5px}
+.pf-t th{text-align:left;font-weight:600;font-size:11.5px;color:var(--muted);padding:4px 12px 4px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.pf-t td{padding:7px 12px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.pf-t tr:last-child td{border-bottom:0}
+.pf-t td:first-child{white-space:nowrap;font-weight:600}
+.pf-t td:first-child code{font-size:12.5px;font-weight:700}
+.pf-tw{overflow-x:auto}
+.pf-l{margin:0;padding-left:1.2em;display:grid;gap:4px;font-size:12.5px}
+.pf-l li::marker{color:var(--muted)}
+.pf-src{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.pf-quote{margin:0;padding:10px 14px;border-left:2px solid var(--line);display:grid;gap:4px;font-size:12.5px}
+.pf-quote q{font-family:var(--mono);font-size:12px;quotes:none}
+.pf-quote span{color:var(--muted)}
+.pf-sum{margin:28px 0 0;padding-top:16px;border-top:1px solid var(--line);font-family:var(--serif);font-size:16px;line-height:1.75;max-width:72ch}
+.pf-sum strong{font-family:var(--sans);font-weight:700}
+.pf-sum .add{display:inline-block;margin-left:6px;font-family:var(--sans);vertical-align:middle}
+@media (max-width:900px){.pf-two{grid-template-columns:1fr}}
+@media (max-width:720px){
+  .wrap{padding:24px 14px 140px} h1{font-size:26px}
+  .board{padding:18px 14px}
+  .row,.conn{grid-template-columns:1fr;gap:6px}
+  .rail{padding-top:0;grid-auto-flow:column;justify-content:start;gap:8px}
+  .row + .row{margin-top:20px;padding-top:18px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{.pf-fig{overflow-x:visible}.pf-fig svg{min-width:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker"><a class="home" href="index.html">← 目次</a><span class="tag-doc">解説</span><span>Cursor プラグイン · cursor/plugins · pstack</span></div>
+  <h1>プレイブックと fan out<span class="sub">作業手順書と、サブエージェントを並列実行して集約する型</span></h1>
+  <p class="lead">pstack では、依頼を受けたチャットがまず<strong>プレイブック</strong>を 1 本選び、その手順に沿って作業を進めます。手順の一部は複数のサブエージェントへの分担を前提にしており、その実行に使うのが <strong>fan out</strong> 型のスキルです。プレイブックが「何を、どの順で、どこで合格とするか」を決め、fan out がそのうちの 1 手順を並列に実行します。</p>
+  <ul class="facts" aria-label="規模">
+    <li><b>23</b><span>プレイブック</span></li>
+    <li><b>9</b><span>並列ワークフロー</span></li>
+    <li><b>4</b><span>fan out の共通の段</span></li>
+    <li><b>1</b><span>起動に使うメッセージ</span></li>
+  </ul>
+  <div class="meta"><a href="https://github.com/cursor/plugins/tree/main/pstack">cursor/plugins/pstack</a><span>2026-10-22 時点の main（d1453c1）を読んで作成</span><span>4 段の図と最後のまとめは本文からの解釈</span></div>
+</header>
+<div class="toolbar">
+  <div class="legend"><span>小さな等幅の文字は出典のファイル名</span></div>
+  <button type="button" class="themebtn" id="pf-theme">表示: 自動</button>
+</div>
+
+<main class="board" id="pf-board">
+  <section class="row wide" aria-labelledby="pf-r1"><div class="rail" id="pf-r1">1 OVERVIEW<span class="jp">概要</span></div>
+    <div class="pf-body">
+      <div class="pf-two">
+        <div class="box amber"><h3>プレイブック<small>playbooks/*.md</small></h3>
+          <p class="pf-def">作業の種類ごとに書かれた短い手順書です。責任の範囲、手順の順番、通らないと進めない関門、終わったら渡す先を書きます。</p>
+          <div class="pf-k">書かないこと</div>
+          <p>判断の根拠は原則（<code>principle-*</code> スキル）に、個々の作業のやり方は how や architect などのスキルに任せます。プレイブックに書くのは、それらを呼ぶ順序と通過条件だけです。このため 1 本は短く、23 本の中央値は 2.4 KB です。</p>
+        </div>
+        <div class="box blue"><h3>fan out<small>how · why · arena · swarm …</small></h3>
+          <p class="pf-def">1 つの作業を複数のサブエージェントに分担させて並行実行し、返ってきた結果を 1 つの答えに集約する型です。起動する体数、役割ごとのモデル、集約の方法が型ごとに決まっています。</p>
+          <div class="pf-k">構成</div>
+          <p>親チャットが複数のサブエージェントを 1 つのメッセージで並行起動し、それぞれに担当範囲と出力先を割り当てます。結果は集約役（how の explainer、why の synthesizer、arena では親自身）が 1 つにまとめ、呼び出し元へ返します。</p>
+        </div>
+      </div>
+      <p>2 つは別の階層にあり、プレイブックの手順の 1 つが fan out を呼びます。fan out は終わると答えを 1 つ返し、プレイブックは次の手順に進みます。</p>
+    </div>
+  </section>
+
+  <section class="row wide" aria-labelledby="pf-r2"><div class="rail" id="pf-r2">2 PLAYBOOK<span class="jp">手順書の使われ方</span></div>
+    <div class="pf-body">
+      <p>入口のルーター <code>/poteto-mode</code> は、依頼に合うプレイブックを 1 本選び、その手順を todo の先頭に一字一句そのまま写します。やらない手順も消さず、<code>skip: 理由</code> を付けて残します。合うものが無い時は <code>figure-it-out</code> に回し、<code>figure-it-out</code> が専用の手順を作ります。何日も続く計画は <code>orchestrate</code> に回します。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">SKILL.md</a></p>
+      <p>下の図は feature プレイブックの 8 手順です。太い枠の 4 つが fan out を呼びます。残りの手順は、並列にできる所の書き出しや検証、コミットの整理のように、親のチャットが自分で進めます。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/feature.md">feature.md</a></p>
+      <figure class="pf-fig">
+<svg viewBox="0 0 1000 396" role="img" aria-labelledby="pf-a-title pf-a-desc">
+<title id="pf-a-title">feature プレイブックの手順と、手順から呼ばれる fan out</title>
+<desc id="pf-a-desc">feature プレイブックの 8 手順のうち、1 が how、2 が architect、4 が形が複数あり得る時に arena、7 が設計に争点がある時に interrogate を呼ぶ。残りの手順は並列ワークフローを呼ばない。</desc>
+<defs><marker id="pf-a-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker></defs>
+<text class="ey" x="24" y="28">PLAYBOOK · feature（todo に写した手順）</text>
+<text class="ey" x="664" y="28">FAN OUT（呼ばれる並列ワークフロー）</text>
+<line class="e" x1="584" y1="64.0" x2="662" y2="64.0" marker-end="url(#pf-a-arrow)"/>
+<line class="e" x1="584" y1="106.0" x2="662" y2="106.0" marker-end="url(#pf-a-arrow)"/>
+<line class="e" x1="584" y1="190.0" x2="662" y2="190.0" marker-end="url(#pf-a-arrow)"/>
+<line class="e" x1="584" y1="316.0" x2="662" y2="316.0" marker-end="url(#pf-a-arrow)"/>
+<rect class="n call" x="24" y="48" width="560" height="32" rx="6"/>
+<rect class="num" x="34" y="55" width="18" height="18" rx="4"/><text class="cn" x="43" y="68" text-anchor="middle">1</text>
+<text class="sj" x="64" y="68.5">how で対象のサブシステムを読む</text>
+<rect class="n w" x="664" y="48" width="312" height="32" rx="6"/>
+<text class="nm" x="678" y="68.5">how</text>
+<text class="nj" x="784" y="68.5">explorer ×2〜4 → 説明役</text>
+<rect class="n call" x="24" y="90" width="560" height="32" rx="6"/>
+<rect class="num" x="34" y="97" width="18" height="18" rx="4"/><text class="cn" x="43" y="110" text-anchor="middle">2</text>
+<text class="sj" x="64" y="110.5">architect で設計案を並列に探る</text>
+<rect class="n w" x="664" y="90" width="312" height="32" rx="6"/>
+<text class="nm" x="678" y="110.5">architect</text>
+<text class="nj" x="784" y="110.5">how・why → arena で 2 案</text>
+<rect class="n" x="24" y="132" width="560" height="32" rx="6"/>
+<rect class="num" x="34" y="139" width="18" height="18" rx="4"/><text class="cn" x="43" y="152" text-anchor="middle">3</text>
+<text class="sj dim" x="64" y="152.5">throughput checkpoint：並列にできる所を 4 項目で書く</text>
+<rect class="n call" x="24" y="174" width="560" height="32" rx="6"/>
+<rect class="num" x="34" y="181" width="18" height="18" rx="4"/><text class="cn" x="43" y="194" text-anchor="middle">4</text>
+<text class="sj" x="64" y="194.5">実装をサブエージェントに任せる。形が複数あり得るなら arena</text>
+<rect class="n w" x="664" y="174" width="312" height="32" rx="6"/>
+<text class="nm" x="678" y="194.5">arena</text>
+<text class="nj" x="784" y="194.5">N 案 → 別系統の審判 → graft</text>
+<rect class="n" x="24" y="216" width="560" height="32" rx="6"/>
+<rect class="num" x="34" y="223" width="18" height="18" rx="4"/><text class="cn" x="43" y="236" text-anchor="middle">5</text>
+<text class="sj dim" x="64" y="236.5">実際の画面で確かめる</text>
+<rect class="n" x="24" y="258" width="560" height="32" rx="6"/>
+<rect class="num" x="34" y="265" width="18" height="18" rx="4"/><text class="cn" x="43" y="278" text-anchor="middle">6</text>
+<text class="sj dim" x="64" y="278.5">小さく順序立てたコミットに直す</text>
+<rect class="n call" x="24" y="300" width="560" height="32" rx="6"/>
+<rect class="num" x="34" y="307" width="18" height="18" rx="4"/><text class="cn" x="43" y="320" text-anchor="middle">7</text>
+<text class="sj" x="64" y="320.5">設計に争点があれば interrogate</text>
+<rect class="n w" x="664" y="300" width="312" height="32" rx="6"/>
+<text class="nm" x="678" y="320.5">interrogate</text>
+<text class="nj" x="784" y="320.5">モデル別レビュー → 仕分け</text>
+<rect class="n" x="24" y="342" width="560" height="32" rx="6"/>
+<rect class="num" x="34" y="349" width="18" height="18" rx="4"/><text class="cn" x="43" y="362" text-anchor="middle">8</text>
+<text class="sj dim" x="64" y="362.5">Opening a PR を実行する</text>
+<line class="rule" x1="24" y1="388" x2="976" y2="388"/>
+</svg>
+        <figcaption>図 1　feature プレイブックの手順と、そこから呼ばれる fan out。architect は内部で how・why と arena をさらに呼ぶ。</figcaption>
+      </figure>
+      <p>ルーターの常時トリガーも同じ型を呼びます。関数の境界を越えるコードには <code>architect</code>、並列の網羅や競争には <code>swarm</code>、設計の比べ合わせには <code>arena</code>、争点のある設計には <code>interrogate</code> を使います。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">SKILL.md</a>　プレイブックの中身は <a href="pstack-playbooks.html">pstack のプレイブック</a> で詳しく扱っています。</p>
+    </div>
+  </section>
+
+  <section class="row wide" aria-labelledby="pf-r3"><div class="rail" id="pf-r3">3 FAN OUT<span class="jp">並列実行と集約</span><span class="add">図は解釈</span></div>
+    <div class="pf-body">
+      <p>本文では「fan out」は独立した部品の名前ではなく、段の名前や動詞として出てきます。arena と swarm には <code>Phase B: Fan out</code> という段があり、ガイドには how について「大きなサブシステムでは explorer を 2〜4 体 fan out する」と書かれています。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/swarm/SKILL.md">SKILL.md</a> <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/arena/SKILL.md">SKILL.md</a> <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/docs/guide/03-understand.md">03-understand.md</a>　どの型もおおむね次の 4 段で動きます。</p>
+      <figure class="pf-fig">
+<svg viewBox="0 0 1000 300" role="img" aria-labelledby="pf-b-title pf-b-desc">
+<title id="pf-b-title">fan out に共通する 4 段</title>
+<desc id="pf-b-desc">親チャットが完了条件、役割、人数、モデル、出力先を決め、N 体のサブエージェントを 1 メッセージで起動する。各サブエージェントは自分の区画だけを担当する。結果は集約役が読み、重複をまとめ、欠けた区画を gap として記録し、呼び出し元に 1 つの報告を返す。</desc>
+<defs><marker id="pf-b-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker></defs>
+<text class="ey" x="24" y="28">1 FRAME</text>
+<text class="ey" x="330" y="28">2 FAN OUT</text>
+<text class="ey" x="604" y="28">3 AGGREGATE</text>
+<text class="ey" x="840" y="28">4 REPORT</text>
+<line class="e" x1="244" y1="152" x2="328" y2="70" marker-end="url(#pf-b-arrow)"/>
+<line class="e" x1="530" y1="70" x2="602" y2="118" marker-end="url(#pf-b-arrow)"/>
+<line class="e" x1="244" y1="152" x2="328" y2="146" marker-end="url(#pf-b-arrow)"/>
+<line class="e" x1="530" y1="146" x2="602" y2="152" marker-end="url(#pf-b-arrow)"/>
+<line class="e" x1="244" y1="152" x2="328" y2="222" marker-end="url(#pf-b-arrow)"/>
+<line class="e" x1="530" y1="222" x2="602" y2="186" marker-end="url(#pf-b-arrow)"/>
+<line class="e" x1="804" y1="152" x2="838" y2="152" marker-end="url(#pf-b-arrow)"/>
+<rect class="n" x="24" y="92" width="220" height="120" rx="6"/>
+<text class="nt" x="40" y="118">親チャットが決める</text>
+<text class="nj" x="40" y="144">完了条件と、返す物の形</text>
+<text class="nj" x="40" y="166">配り方（区画か、競争か）</text>
+<text class="nj" x="40" y="188">人数・モデル・各自の出力先</text>
+<rect class="n w" x="330" y="48" width="200" height="44" rx="6"/>
+<text class="ns" x="344" y="66">worker 1</text>
+<text class="nj" x="344" y="83">区画 A だけを担当</text>
+<rect class="n w" x="330" y="124" width="200" height="44" rx="6"/>
+<text class="ns" x="344" y="142">worker 2</text>
+<text class="nj" x="344" y="159">区画 B だけを担当</text>
+<rect class="n w" x="330" y="200" width="200" height="44" rx="6"/>
+<text class="ns" x="344" y="218">worker N</text>
+<text class="nj" x="344" y="235">単独で読める指示書を持つ</text>
+<rect class="n" x="604" y="92" width="200" height="120" rx="6"/>
+<text class="nt" x="620" y="118">集約役が読む</text>
+<text class="nj" x="620" y="144">同じ指摘はまとめる</text>
+<text class="nj" x="620" y="166">欠けた区画は gap として記録</text>
+<text class="nj" x="620" y="188">生の出力は貼らない</text>
+<rect class="n f" x="840" y="118" width="136" height="68" rx="6"/>
+<text class="nt" x="908" y="146" text-anchor="middle">1 つの報告</text>
+<text class="nj" x="908" y="168" text-anchor="middle">呼び出し元へ返す</text>
+<line class="rule" x1="24" y1="262" x2="976" y2="262"/>
+<text class="lt" x="24" y="286">起動は 1 メッセージでまとめる。脱落した 1 体は待たず、N−1 体で続けて、そのことを報告に書く。</text>
+</svg>
+        <figcaption>図 2　fan out に共通する 4 段。swarm の Frame・Fan out・Aggregate・Report を基に、how・why・arena・interrogate の手順と照らし合わせて描いた。</figcaption>
+      </figure>
+      <div class="pf-rules">
+        <div class="box"><h3>1 メッセージでまとめて起動する</h3><p>すべてのサブエージェントを 1 つのメッセージで起動し、並行して実行させます。1 体ずつ起動すると逐次実行になります。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/swarm/SKILL.md">SKILL.md</a> <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/how/SKILL.md">SKILL.md</a></p></div>
+        <div class="box"><h3>書き込む先は 1 体に 1 つ</h3><p>書き込む worker にはそれぞれ別の worktree かディレクトリを渡します。共有の場所に同時に書かせません。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/arena/SKILL.md">SKILL.md</a></p></div>
+        <div class="box"><h3>指示書は単独で読める</h3><p>ゴール、範囲、担当の区画、確かめ方、報告の形を全部書きます。worker は親の会話を見られません。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/swarm/SKILL.md">SKILL.md</a></p></div>
+        <div class="box"><h3>モデルは役割で決まる</h3><p><code>pstack-models.mdc</code> の 1 行が役割 1 つのモデルを決めます。既定では、探す役が grok、まとめる役が opus です。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/how/SKILL.md">SKILL.md</a></p></div>
+        <div class="box"><h3>判定は別系統のモデルに</h3><p>arena では、審判に親と別系統のモデルを優先して選びます。interrogate は役柄を与えず、モデルの違いで多様な指摘を集めます。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/interrogate/SKILL.md">SKILL.md</a></p></div>
+        <div class="box"><h3>欠けは合格に数えない</h3><p>脱落が出たら N−1 体で続け、脱落したことを書き残します。swarm では、SHA や手順が書かれていない結果を捨て、その worker を 1 回だけ起動し直します。2 回目も書かれていなければ、gap（未検証の欠落）として記録します。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/swarm/SKILL.md">SKILL.md</a></p></div>
+        <div class="box"><h3>並列化は継ぎ目に限る</h3><p>並列化するのは、独立して分けられる継ぎ目（seam）がある所だけです。コードが絡む仕事は担当 1 体に渡し、その担当が先行する関門（blocking phase）を通過した後に内部で並列化します。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/figure-it-out/SKILL.md">SKILL.md</a> <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/feature.md">feature.md</a></p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="row wide" aria-labelledby="pf-r4"><div class="rail" id="pf-r4">4 CATALOG<span class="jp">9 つの型</span></div>
+    <div class="pf-body">
+      <p>どれを fan out の型として数えるかは本文で決まっていないため、<a href="pstack-skeleton.html">全体構成図</a>の「3 FAN OUT」と同じ 9 つを並べます。人数とモデルは既定値です。</p>
+      <div class="pf-tw"><table class="pf-t">
+        <tr><th>型</th><th>用途</th><th>並列に動かす役</th><th>集約の方法</th></tr>
+        <tr><td><code>how</code></td><td>仕組みの説明</td><td>小さな問いなら explainer 1 体のみ。大きなサブシステムでは、切り口ごとに読み取り専用の explorer を 2〜4 体（grok）</td><td>explainer 1 体（opus）が概要・仕組み・場所・落とし穴の形にまとめる <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/how/SKILL.md">SKILL.md</a></td></tr>
+        <tr><td><code>why</code></td><td>なぜこの形かを証拠で答える</td><td>git、課題管理、文書、チャット、監視、エラー、分析のうち、MCP がある種類ごとに investigator を 1 体（grok）</td><td>synthesizer（opus）が引用付きでまとめ、直接の証拠と推測を分ける <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/why/SKILL.md">SKILL.md</a></td></tr>
+        <tr><td><code>architect</code></td><td>実装前に型と境界を決める</td><td>how・why で下調べし、arena で構造の違う案を 2 つ以上作る</td><td>1 つの設計に合成して実装する。合わなければ設計を捨ててやり直す <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/architect/SKILL.md">SKILL.md</a></td></tr>
+        <tr><td><code>arena</code></td><td>同じ課題の案を比べる</td><td>runner N 体が同じ指示で、別々の場所に書く（opus と grok を 1 体ずつ）</td><td>別系統の審判と親が採点し、ベースにする案を 1 つ選んで、他の案の優れた部分を手作業で取り込む（graft） <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/arena/SKILL.md">SKILL.md</a></td></tr>
+        <tr><td><code>swarm</code></td><td>網羅と競争</td><td>区画ごとに分けるか、同じ指示で競わせる。クラウドの worker（grok）</td><td><code>PASS</code>・<code>ISSUES</code>・<code>BLOCKED</code> を集めて 1 つの表にする。競争では選び方を先に宣言する <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/swarm/SKILL.md">SKILL.md</a></td></tr>
+        <tr><td><code>interrogate</code></td><td>差分の敵対的レビュー</td><td>設定したモデルごとに reviewer を 1 体（opus と grok）</td><td>親が lead として Act on・Consider・Noted・Dismissed に仕分ける。複数のモデルが別々に挙げた指摘を重く見る <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/interrogate/SKILL.md">SKILL.md</a></td></tr>
+        <tr><td><code>reflect</code></td><td>長い作業の学びをスキルに戻す</td><td>tooling・judgment・divergent の 3 体</td><td>synthesizer が採用・却下・保留に分ける。採用した学びは既存スキルの編集に反映する <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/reflect/SKILL.md">SKILL.md</a></td></tr>
+        <tr><td><code>teach</code></td><td>人が理解できるように教える</td><td>how と why を並列に実行する</td><td>2 つの結果を 1 本の説明にする <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/teach/SKILL.md">SKILL.md</a></td></tr>
+        <tr><td><code>figure-it-out</code></td><td>合うプレイブックが無い時</td><td>何を並列にするかを、その作業のために設計する</td><td>専用の手順を作り、決定ログを付けながら進める <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/figure-it-out/SKILL.md">SKILL.md</a></td></tr>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="row wide" aria-labelledby="pf-r5"><div class="rail" id="pf-r5">5 VS ORCHESTRATE<span class="jp">指示書との違い</span></div>
+    <div class="pf-body">
+      <p>fan out もサブエージェントへの指示書の一種です。ただし、汎用のオーケストレーションとは役目が違います。pstack で「何日も続く計画を、常駐する 1 つのチャットが多数のサブエージェントで回す」のは <code>orchestrate</code> プレイブックの仕事です。</p>
+      <div class="pf-tw"><table class="pf-t">
+        <tr><th></th><th>fan out（how · swarm · arena …）</th><th>orchestrate プレイブック</th></tr>
+        <tr><td>置き場所</td><td>スキル。プレイブックの手順やルーターの常時トリガーから呼ぶ</td><td>プレイブック。ルーターが「1 回の会話では終わらない計画」と判断した時に選ぶ</td></tr>
+        <tr><td>長さ</td><td>1 回の呼び出しで完結する（起動、集約、返却）</td><td>何日も続く。完了通知は割り込みでなくキューに積み、区切りでまとめて処理する</td></tr>
+        <tr><td>指示書</td><td>型が決まっている。人数・モデル・まとめ方を毎回考えなくてよい</td><td>毎回書く。GOAL や SCOPE を埋めた指示書が唯一の成果物。常設の命令を毎回そのまま貼る</td></tr>
+        <tr><td>規模</td><td>数体から十数体。multi-phase-plan の実機検証は swarm で 10 レーン</td><td>数十〜数百体。必要なら track ごとに sub-coordinator を置く</td></tr>
+        <tr><td>親の責任範囲</td><td>1 つの問いへの答え</td><td>計画全体。コードは書かない</td></tr>
+      </table></div>
+      <blockquote class="pf-quote">
+        <q>You own the program, never the code. Author briefs, drain the queue, keep the frontier green, decide.</q>
+        <span>計画を持ち、コードは持たない。指示書を書き、届いた完了通知を処理し、先頭の PR を緑に保ち、決める。 <a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></span>
+      </blockquote>
+      <ul class="pf-l">
+        <li>プレイブックの手順で親が起動する委任先は <code>poteto-agent</code> です。how・why・interrogate・reflect・swarm は、モデルを混ぜるために自分で <code>subagent_type</code> を決めます。親はそれを <code>poteto-agent</code> に置き換えません。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">SKILL.md</a></li>
+        <li>親が直接並列化するのは、監査や横断調査、競わせる実験のように、別々の成果物になる区画だけです。<a class="pf-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/feature.md">feature.md</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="pf-sum"><strong>一言で。</strong>プレイブックは「何を、どの順で、どこで合格とするか」を決める手順書です。fan out はその手順の 1 つを複数のサブエージェントで並列に実行し、結果を 1 つに集約して返す型で、1 回の呼び出しで完結します。複数日にわたる作業の割り振りは orchestrate が受け持ちます。<span class="add">解釈</span></p>
+</main>
+<p class="note">「並列ワークフロー 9 つ」という数え方は全体構成図の分類で、本文にこの括りがあるわけではありません。automate-me や maintain-verification-skill もサブエージェントを並列に使いますが、このページでは扱っていません。</p>
+</div>
+<script>
+const tb=document.getElementById('pf-theme'),modes=['auto','light','dark'],lbl={auto:'自動',light:'ライト',dark:'ダーク'};let m=0;
+tb.addEventListener('click',()=>{m=(m+1)%3;const v=modes[m];if(v==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=v;tb.textContent='表示: '+lbl[v]});
+</script>
+</body>
+</html>
