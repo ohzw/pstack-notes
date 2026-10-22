@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pstack 全体構成図：Cursor プラグインの中身をルーターから出荷まで</title>
+<style>
+/* palette: ayu Light / ayu Dark (npm ayu 9.1.0). ink and muted are darkened/lightened from ayu fg for WCAG AA */
+:root{
+  --ground:#EBEEF0; --card:#FCFCFC; --ink:#474C52; --muted:#626A75; --line:rgba(107,125,143,.24); --soft:#F3F4F5;
+  --amber:rgba(242,151,24,.12); --amber-b:rgba(242,151,24,.6); --blue:rgba(34,164,230,.1); --blue-b:rgba(34,164,230,.42); --pink:rgba(163,122,204,.1); --pink-b:rgba(163,122,204,.6);
+  --sel:#035BD6; --on-sel:#FFFFFF; --sel-soft:rgba(3,91,214,.12); --grok:rgba(134,179,0,.14); --grok-i:#4F6900; --opus:rgba(250,133,50,.14); --opus-i:#7E4B01;
+  --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  --serif:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --ring:0 0 0 1px oklch(0 0 0 / .08),0 1px 2px -1px oklch(0 0 0 / .08),0 2px 4px 0 oklch(0 0 0 / .05);
+  --float:0 8px 28px rgba(107,125,143,.24);
+}
+@media (prefers-color-scheme:dark){:root{
+  --ground:#0D1017; --card:#141821; --ink:#BFBDB6; --muted:#8A909C; --line:#262C38; --soft:#10141C;
+  --amber:rgba(230,180,80,.1); --amber-b:rgba(230,180,80,.55); --blue:rgba(89,194,255,.08); --blue-b:rgba(89,194,255,.4); --pink:rgba(210,166,255,.08); --pink-b:rgba(210,166,255,.45);
+  --sel:#73B8FF; --on-sel:#0D1017; --sel-soft:rgba(115,184,255,.18); --grok:rgba(170,217,76,.12); --grok-i:#AAD94C; --opus:rgba(255,143,64,.12); --opus-i:#FF8F40;
+  --ring:0 0 0 1px oklch(1 0 0 / .1);
+  --float:0 8px 28px rgba(0,0,0,.5);
+}}
+:root[data-theme="light"]{
+  --ground:#EBEEF0; --card:#FCFCFC; --ink:#474C52; --muted:#626A75; --line:rgba(107,125,143,.24); --soft:#F3F4F5;
+  --amber:rgba(242,151,24,.12); --amber-b:rgba(242,151,24,.6); --blue:rgba(34,164,230,.1); --blue-b:rgba(34,164,230,.42); --pink:rgba(163,122,204,.1); --pink-b:rgba(163,122,204,.6);
+  --sel:#035BD6; --on-sel:#FFFFFF; --sel-soft:rgba(3,91,214,.12); --grok:rgba(134,179,0,.14); --grok-i:#4F6900; --opus:rgba(250,133,50,.14); --opus-i:#7E4B01;
+  --ring:0 0 0 1px oklch(0 0 0 / .08),0 1px 2px -1px oklch(0 0 0 / .08),0 2px 4px 0 oklch(0 0 0 / .05);
+  --float:0 8px 28px rgba(107,125,143,.24);
+}
+:root[data-theme="dark"]{
+  --ground:#0D1017; --card:#141821; --ink:#BFBDB6; --muted:#8A909C; --line:#262C38; --soft:#10141C;
+  --amber:rgba(230,180,80,.1); --amber-b:rgba(230,180,80,.55); --blue:rgba(89,194,255,.08); --blue-b:rgba(89,194,255,.4); --pink:rgba(210,166,255,.08); --pink-b:rgba(210,166,255,.45);
+  --sel:#73B8FF; --on-sel:#0D1017; --sel-soft:rgba(115,184,255,.18); --grok:rgba(170,217,76,.12); --grok-i:#AAD94C; --opus:rgba(255,143,64,.12); --opus-i:#FF8F40;
+  --ring:0 0 0 1px oklch(1 0 0 / .1);
+  --float:0 8px 28px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.lead,.box p,.ds,.note,.exec p,.inspector .rel{text-wrap:pretty}
+.box h3{text-wrap:balance}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+.wrap{max-width:1320px;margin:0 auto;padding:40px 28px 120px;display:grid;gap:24px}
+header{display:grid;gap:14px;max-width:880px}
+.kicker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.kicker .tag-doc{color:var(--opus-i);background:var(--opus);border-radius:4px;padding:2px 8px;letter-spacing:.04em}
+h1{font-size:34px;line-height:1.2;font-weight:800;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--muted);letter-spacing:0;word-break:keep-all;overflow-wrap:anywhere}
+.lead{font-family:var(--serif);font-size:16px;line-height:1.75;color:var(--muted);margin:0;max-width:62ch}
+.lead strong{color:var(--ink);font-weight:600}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.facts li{display:grid;gap:0;padding:8px 14px;border-radius:10px;background:var(--card);box-shadow:var(--ring);min-width:108px}
+.facts b{font-size:22px;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--ink)}
+.facts b code{font-family:var(--mono);font-size:16px;font-weight:700}
+.facts span{font-size:11.5px;color:var(--muted)}
+.meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.meta a{color:inherit}
+.toolbar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);align-items:center}
+.lg{display:inline-flex;gap:6px;align-items:center}
+.sw{width:22px;height:14px;border-radius:4px;border:2px solid var(--sel);background:var(--card)}
+.sw.out{background:var(--sel-soft)} .sw.in{border-style:dashed} .sw.dim{opacity:.3;border-color:var(--line)}
+.themebtn{font:inherit;font-size:12px;color:var(--ink);background:var(--card);border:0;box-shadow:var(--ring);border-radius:6px;padding:4px 10px;cursor:pointer}
+.board{background:var(--card);box-shadow:var(--ring);border-radius:14px;padding:28px 28px 20px;display:grid;gap:0}
+.row{display:grid;grid-template-columns:116px 1fr;gap:20px;align-items:start}
+.rail{padding-top:14px;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted);display:grid;gap:2px}
+.rail .jp{letter-spacing:.02em;font-weight:500;font-size:12px}
+.conn{display:grid;grid-template-columns:116px 1fr;gap:20px;height:34px}
+.conn div{display:flex;align-items:center;gap:8px;padding-left:24px;font-size:11px;color:var(--muted);position:relative}
+.conn div::before{content:"";width:1px;height:100%;background:var(--muted);position:absolute;left:18px;top:0}
+.conn div::after{content:"";position:absolute;left:14px;bottom:0;border:4px solid transparent;border-top:6px solid var(--muted)}
+.box{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--card);display:grid;gap:10px;align-content:start}
+.box h3{margin:0;font-size:15px;font-weight:700}
+.box p{margin:0;color:var(--muted);font-size:12.5px}
+.box.amber{background:var(--amber);border-color:var(--amber-b)}
+.box.blue{background:var(--blue);border-color:var(--blue-b)}
+.box.pink{background:var(--pink);border-color:var(--pink-b)}
+.route{display:grid;grid-template-columns:minmax(180px,1fr) minmax(320px,2.2fr) minmax(200px,1.1fr);gap:14px;align-items:stretch}
+.flowarrow{display:none}
+.trig{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 18px}
+.trig li{display:flex;align-items:center;gap:6px;font-size:12px;min-width:0}
+.trig .when{color:var(--muted)}
+.trig .arr{color:var(--muted)}
+.entries{display:flex;flex-wrap:wrap;gap:6px}
+.mdc{border-style:dashed}
+.trigbox{grid-column:1/-1;border-color:var(--amber-b);border-style:dashed;background:var(--soft)}
+.trigbox h3 small{font-weight:400;font-size:11.5px;color:var(--muted);margin-left:8px}
+.mdc code,.box code{font-family:var(--mono);font-size:12px}
+details summary{cursor:pointer;font-size:12px;color:var(--muted)}
+table{border-collapse:collapse;font-size:11.5px;width:100%;margin-top:6px}
+td{padding:2px 6px 2px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td:last-child{font-family:var(--mono);white-space:nowrap}
+.steps{column-count:3;column-gap:16px}
+.pbg{break-inside:avoid;display:grid;gap:0;padding-bottom:12px}
+.pbg h4,.leafg h5,.prg h5{margin:0 0 6px;font-size:12px;font-weight:700;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pbg h4 small,.prg h5 small{font-weight:400;color:var(--muted);font-size:11px}
+.chips{display:grid;gap:6px}
+.chip,.mini,.fanhead,.themebtn,.clear{position:relative;transition-property:opacity,background-color,box-shadow,scale;transition-duration:150ms;transition-timing-function:ease-out}
+.chip,.mini,.fanhead{font:inherit;color:inherit;text-align:left;cursor:pointer;border:0;box-shadow:var(--ring);background:var(--card);border-radius:8px}
+.chip:active,.mini:active,.themebtn:active,.clear:active{scale:.96}
+.themebtn::after,.clear::after{content:"";position:absolute;inset:min(0px,calc(50% - 20px))}
+.mini::after{content:"";position:absolute;inset:-3px}
+.chip{display:grid;gap:1px;padding:6px 10px}
+.chip .nm,.fanhead .nm{font-family:var(--mono);font-size:12.5px;font-weight:600}
+.chip .ds,.fanhead .ds{font-size:11.5px;color:var(--muted);line-height:1.4}
+.mini{font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.minis{display:flex;flex-wrap:wrap;gap:6px}
+.fans{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.fan{border:1px solid var(--line);border-radius:12px;padding:6px 6px 10px;display:grid;gap:8px;align-content:start;background:var(--card)}
+.fanhead{display:grid;gap:2px;box-shadow:none;padding:4px 6px;border-radius:6px;background:transparent}
+.fanhead .nm{font-size:14px}
+.add{justify-self:start;font-size:10px;letter-spacing:.06em;color:var(--muted);border:1px dashed var(--line);border-radius:4px;padding:0 5px}
+.pipe{list-style:none;margin:0;padding:0 6px;display:grid;gap:3px}
+.pipe li{display:grid;grid-template-columns:auto 1fr;gap:8px;font-size:11.5px}
+.pipe b{font-weight:600;color:var(--muted);white-space:nowrap}
+.pipe span{font-family:var(--mono);font-size:11px}
+.tags{display:flex;flex-wrap:wrap;gap:4px;padding:0 6px}
+.tag{font-size:10.5px;border-radius:4px;padding:1px 6px;font-family:var(--mono)}
+.t-grok{background:var(--grok);color:var(--grok-i)} .t-opus{background:var(--opus);color:var(--opus-i)} .t-other{background:var(--soft);color:var(--muted)}
+.apply{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px}
+.leafs{column-count:2;column-gap:14px}
+.leafg{break-inside:avoid;padding-bottom:10px}
+.prs{display:grid;gap:10px}
+.ship{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.exec{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;font-size:12.5px;color:var(--muted)}
+.exec .chip{color:var(--ink)}
+/* selection states */
+.board.has-sel [data-id]{opacity:.28}
+.board.has-sel .fan:has(.fanhead:not(.is-sel,.is-out,.is-in)){opacity:.35}
+.board.has-sel .fan .fanhead{opacity:1}
+.board.has-sel [data-id].is-sel,.board.has-sel [data-id].is-out,.board.has-sel [data-id].is-in{opacity:1}
+[data-id].is-sel{outline:2px solid var(--sel);outline-offset:1px;background:var(--sel);color:var(--on-sel)}
+[data-id].is-sel .ds{color:inherit;opacity:.85}
+[data-id]:hover{box-shadow:0 0 0 1px var(--sel)}
+[data-id].is-out{box-shadow:0 0 0 2px var(--sel);background:var(--sel-soft)}
+[data-id].is-in{box-shadow:none;outline:2px dashed var(--sel);outline-offset:-2px}
+[data-id]:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.inspector{position:sticky;bottom:12px;z-index:5;background:var(--card);box-shadow:var(--ring),var(--float);border-radius:18px;padding:12px 16px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:start}
+.inspector .k{font-size:11px;color:var(--muted)}
+.inspector .t{font-family:var(--mono);font-weight:700;font-size:14px}
+.inspector .rel{font-size:12px;display:grid;gap:3px;grid-column:1/-1}
+.inspector .rel b{font-weight:600;color:var(--muted);margin-right:6px}
+.inspector .rel code{font-family:var(--mono);font-size:11.5px}
+.clear{font:inherit;font-size:12px;border:0;box-shadow:var(--ring);background:var(--soft);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
+.note{font-size:12px;color:var(--muted);max-width:90ch;margin:0}
+@media (max-width:1100px){
+  .route{grid-template-columns:1fr}
+  .steps{column-count:2}
+  .apply,.ship{grid-template-columns:1fr}
+}
+@media (max-width:720px){
+  .wrap{padding:24px 14px 140px} h1{font-size:26px}
+  .board{padding:18px 14px}
+  .row,.conn{grid-template-columns:1fr;gap:6px}
+  .rail{padding-top:0;grid-auto-flow:column;justify-content:start;gap:8px}
+  .conn div{padding-left:24px}
+  .route,.tools,.exec{grid-template-columns:1fr} .steps,.leafs{column-count:1}
+}
+@media (pointer:coarse){
+  .mini{padding:9px 12px} .minis{gap:8px} .trig{gap:8px 18px}
+  .mini::after{inset:-4px}
+  .themebtn::after,.clear::after{inset:min(0px,calc(50% - 22px))}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker"><span class="tag-doc">構成図</span><span>Cursor プラグイン · cursor/plugins</span></div>
+  <h1>pstack の全体構成<span class="sub">1 つのルーター、23 のプレイブック、9 つの並列ワークフロー</span></h1>
+  <p class="lead"><strong>pstack</strong> は、Cursor のエージェントにプレイブック（作業種別ごとの手順書）と 24 の原則を守らせ、検証済みの小さな PR を出させるプラグインです。この図は、その中身を「振り分け → 手順 → 並列化 → 適用 → 出荷」の 5 段に分けて示します。</p>
+  <ul class="facts" aria-label="規模">
+    <li><b><code>/poteto-mode</code></b><span>入口のルーター</span></li>
+    <li><b>23</b><span>プレイブック</span></li>
+    <li><b>9</b><span>並列ワークフロー</span></li>
+    <li><b>16</b><span>単体スキル</span></li>
+    <li><b>24</b><span>原則</span></li>
+  </ul>
+  <div class="meta"><span>pstack v0.15.29</span><a href="https://github.com/cursor/plugins/tree/main/pstack">cursor/plugins/pstack</a><span>参照関係は 2026-10-20 時点の main の本文から抽出</span></div>
+</header>
+<div class="toolbar">
+  <div class="legend" aria-label="凡例">
+    <span>項目を押すと関係を表示</span>
+    <span class="lg"><span class="sw out"></span>選んだものが呼ぶ</span>
+    <span class="lg"><span class="sw in"></span>選んだものを呼ぶ</span>
+    <span class="lg"><span class="sw dim"></span>無関係</span>
+  </div>
+  <button type="button" class="themebtn" id="theme">表示: 自動</button>
+</div>
+
+<main class="board" id="board">
+  <section class="row" aria-labelledby="r1"><div class="rail" id="r1">1 ROUTE<span class="jp">振り分け</span></div>
+    <div class="route">
+      <div class="box"><h3>あなたのプロンプト</h3><p>ゴール · 完了条件 · 証明方法</p>
+        <div class="entries"><button type="button" class="mini" data-id="sk:poteto-help">/poteto-help</button><span class="note">迷ったらこちら。送るプロンプトを返す</span></div>
+      </div>
+      <div class="box amber router"><h3><code>/poteto-mode</code>（ルーター）</h3>
+        <p>24 原則の索引を読み、23 プレイブックから 1 つ選んで手順を todo にそのまま写す。どのプレイブックも合わなければ <code>figure-it-out</code> に、数日規模の計画なら <code>orchestrate</code> に回す。</p>
+        <p>省くステップも <code>skip: 理由</code> を付けて todo に残す。</p>
+      </div>
+      <div class="box mdc"><h3><code>pstack-models.mdc</code></h3><p>role 1 行 → モデル 1 つ。<button type="button" class="mini" data-id="sk:setup-pstack">/setup-pstack</button> がこのファイルを書く。ファイルがないときは既定値を使う。</p>
+        <div class="tags"><span class="tag t-grok">grok = grok-4.7-xhigh-fast</span><span class="tag t-opus">opus = claude-opus-5-5-xhigh</span></div>
+        <details><summary>17 の role 行（既定値）</summary><table><tr><td>feature, refactoring</td><td>grok</td></tr><tr><td>bug-fix</td><td>grok</td></tr><tr><td>perf-issue</td><td>grok</td></tr><tr><td>hillclimb</td><td>grok</td></tr><tr><td>judgment and prose</td><td>opus</td></tr><tr><td>hardest tasks</td><td>opus</td></tr><tr><td>how explorer</td><td>grok</td></tr><tr><td>how explainer</td><td>opus</td></tr><tr><td>why investigators</td><td>grok</td></tr><tr><td>why synthesizer</td><td>opus</td></tr><tr><td>reflect tooling</td><td>grok</td></tr><tr><td>reflect judgment, divergent, synthesizer</td><td>opus</td></tr><tr><td>arena runners</td><td>opus, grok</td></tr><tr><td>arena cross-judge pool</td><td>opus, grok</td></tr><tr><td>swarm workers</td><td>grok</td></tr><tr><td>architect runners</td><td>opus, grok</td></tr><tr><td>interrogate reviewers</td><td>opus, grok</td></tr></table></details>
+      </div>
+      <div class="box trigbox"><h3>常時トリガー <small>どのプレイブックの途中でも、条件に当てはまったら呼ぶ（poteto-mode の Non-negotiables）</small></h3><ul class="trig"><li><span class="when">返信・あらゆる文章</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="sk:unslop">unslop</button></li><li><span class="when">文書・PR 説明・commit</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="sk:technical-writing">technical-writing</button></li><li><span class="when">commit 前</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="tool:deslop">deslop</button></li><li><span class="when">レビュー前</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="sk:no-comments">no-comments</button></li><li><span class="when">自分で計測した数値</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="sk:benchmark-checklist">benchmark-checklist</button></li><li><span class="when">長時間・離席・/loop</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="sk:show-me-your-work">show-me-your-work</button></li><li><span class="when">非自明な変更・「本当に?」</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="sk:how">how</button></li><li><span class="when">関数境界をまたぐコード</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="sk:architect">architect</button></li><li><span class="when">並列の網羅・race</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="sk:swarm">swarm</button></li><li><span class="when">設計に異論</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="sk:interrogate">interrogate</button></li><li><span class="when">PR の状態確認</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="pb:babysit">babysit</button></li><li><span class="when">緑のスタックを land</span><span class="arr" aria-hidden="true">→</span><button type="button" class="mini" data-id="pb:shipping">shipping</button></li></ul></div>
+    </div>
+  </section>
+  <div class="conn" aria-hidden="true"><span></span><div>手順を todo に複写</div></div>
+
+  <section class="row" aria-labelledby="r2"><div class="rail" id="r2">2 STEPS<span class="jp">プレイブック 23</span></div>
+    <div class="box blue"><div class="steps"><div class="pbg"><h4>理解・診断<small>読むだけ、または症状の原因を特定</small></h4><div class="chips"><button type="button" class="chip" data-id="pb:investigation"><span class="nm">investigation</span><span class="ds">読み取り専用の質問に、根拠付きで答える</span></button><button type="button" class="chip" data-id="pb:runtime-forensics"><span class="nm">runtime-forensics</span><span class="ds">リークや空転を計装で診断。成果物は診断</span></button><button type="button" class="chip" data-id="pb:trace-forensics"><span class="nm">trace-forensics</span><span class="ds">採取済みプロファイルを事後に診断</span></button></div></div><div class="pbg"><h4>作る・直す<small>コードを変える</small></h4><div class="chips"><button type="button" class="chip" data-id="pb:bug-fix"><span class="nm">bug-fix</span><span class="ds">再現 → 根本原因 → 実行時の証拠で修正</span></button><button type="button" class="chip" data-id="pb:perf-issue"><span class="nm">perf-issue</span><span class="ds">計測した遅さをベースラインと比べて改善</span></button><button type="button" class="chip" data-id="pb:hillclimb"><span class="nm">hillclimb</span><span class="ds">1 指標を仮説ループで改善。採用した改善ごとに 1 commit</span></button><button type="button" class="chip" data-id="pb:feature"><span class="nm">feature</span><span class="ds">名前を付けたデータの形から振る舞いを作る</span></button><button type="button" class="chip" data-id="pb:refactoring"><span class="nm">refactoring</span><span class="ds">振る舞いを変えずに構造を変える</span></button><button type="button" class="chip" data-id="pb:prototype"><span class="nm">prototype</span><span class="ds">使い捨てのスケッチで設計の分岐を実験して決める</span></button><button type="button" class="chip" data-id="pb:visual-parity"><span class="nm">visual-parity</span><span class="ds">2 つの実装の UI をピクセル単位で一致させる</span></button></div></div><div class="pbg"><h4>スキル自体の作業<small>SKILL.md とプロンプト</small></h4><div class="chips"><button type="button" class="chip" data-id="pb:authoring-a-skill"><span class="nm">authoring-a-skill</span><span class="ds">SKILL.md を書く・直す</span></button><button type="button" class="chip" data-id="pb:eval"><span class="nm">eval</span><span class="ds">スキルやプロンプト変更の効果をブラインドで測る</span></button></div></div><div class="pbg"><h4>PR・出荷<small>PR を開き、緑にし、land する</small></h4><div class="chips"><button type="button" class="chip" data-id="pb:opening-a-pr"><span class="nm">opening-a-pr</span><span class="ds">小さな commit 列と説明文で PR を開く。全プレイブックの最後に実行する</span></button><button type="button" class="chip" data-id="pb:babysit"><span class="nm">babysit</span><span class="ds">競合 → レビュー → CI の順に対応し、merge できる状態にする</span></button><button type="button" class="chip" data-id="pb:shipping"><span class="nm">shipping</span><span class="ds">PR ごとに独立して判定し、下から順に land する</span></button></div></div><div class="pbg"><h4>長時間・自律<small>人が離れている間に進める</small></h4><div class="chips"><button type="button" class="chip" data-id="pb:autonomous-run"><span class="nm">autonomous-run</span><span class="ds">1 タスクを完了条件まで止まらず進める</span></button><button type="button" class="chip" data-id="pb:orchestrate"><span class="nm">orchestrate</span><span class="ds">数日規模の計画を 1 コーディネーターが率いる</span></button><button type="button" class="chip" data-id="pb:autopilot-full"><span class="nm">autopilot-full</span><span class="ds">独立した PR の列を、PR ごとに 1 人のオーナーが merge まで進める</span></button><button type="button" class="chip" data-id="pb:autopilot-stack"><span class="nm">autopilot-stack</span><span class="ds">変更の列を 1 本の線形スタックにして渡す</span></button><button type="button" class="chip" data-id="pb:multi-phase-plan"><span class="nm">multi-phase-plan</span><span class="ds">フェーズや積み PR にまたがる計画書を書く</span></button></div></div><div class="pbg"><h4>セッション運用<small>引き継ぎ・中断・掃除</small></h4><div class="chips"><button type="button" class="chip" data-id="pb:session-pickup"><span class="nm">session-pickup</span><span class="ds">前のエージェントの作業を引き継ぐ</span></button><button type="button" class="chip" data-id="pb:pause-safely"><span class="nm">pause-safely</span><span class="ds">再開できる形で作業を止める</span></button><button type="button" class="chip" data-id="pb:worktree-cleanup"><span class="nm">worktree-cleanup</span><span class="ds">merge 済み worktree と古いシミュレータを削除</span></button></div></div></div></div>
+  </section>
+  <div class="conn" aria-hidden="true"><span></span><div>ステップが呼ぶ</div></div>
+
+  <section class="row" aria-labelledby="r3"><div class="rail" id="r3">3 FAN OUT<span class="jp">並列ワークフロー</span></div>
+    <div class="fans"><article class="fan"><button type="button" class="fanhead" data-id="sk:how"><span class="nm">how</span><span class="ds">仕組みを説明する</span></button><ol class="pipe"><li><b>単純</b><span>explainer ×1</span></li><li><b>複雑</b><span>explorer ×2–4 → explainer</span></li></ol><div class="tags"><span class="tag t-grok">explorer · grok</span><span class="tag t-opus">explainer · opus</span></div></article><article class="fan"><button type="button" class="fanhead" data-id="sk:why"><span class="nm">why</span><span class="ds">なぜその形かを証拠で答える</span></button><ol class="pipe"><li><b>証拠源ごと</b><span>investigator ×N → synthesizer</span></li></ol><div class="tags"><span class="tag t-grok">investigator · grok</span><span class="tag t-opus">synthesizer · opus</span></div></article><article class="fan"><button type="button" class="fanhead" data-id="sk:architect"><span class="nm">architect</span><span class="ds">コードを書く前に型と境界を決める</span></button><ol class="pipe"><li><b>手順</b><span>how/why → arena で sketch → 合意 → 実装 → scrap</span></li></ol><div class="tags"><span class="tag t-opus">runner · opus</span><span class="tag t-grok">runner · grok</span></div></article><article class="fan"><button type="button" class="fanhead" data-id="sk:arena"><span class="nm">arena</span><span class="ds">同じ課題の並列案から最良を作る</span></button><ol class="pipe"><li><b>手順</b><span>runner ×N → 別系統の cross-judge → base 選択 → graft</span></li></ol><div class="tags"><span class="tag t-opus">runner · opus</span><span class="tag t-grok">runner · grok</span><span class="tag t-other">judge · 別系統</span></div></article><article class="fan"><button type="button" class="fanhead" data-id="sk:swarm"><span class="nm">swarm</span><span class="ds">並列のワーカーで網羅し、1 つの報告にまとめる</span></button><ol class="pipe"><li><b>形</b><span>区画分割 または race → 集約</span></li></ol><div class="tags"><span class="tag t-grok">cloud worker · grok</span></div></article><article class="fan"><button type="button" class="fanhead" data-id="sk:interrogate"><span class="nm">interrogate</span><span class="ds">複数のモデルで diff のあらを探す</span></button><ol class="pipe"><li><b>手順</b><span>reviewer ×モデル数 + code-quality 観点 → lead 判定</span></li></ol><div class="tags"><span class="tag t-opus">reviewer · opus</span><span class="tag t-grok">reviewer · grok</span></div></article><article class="fan"><button type="button" class="fanhead" data-id="sk:reflect"><span class="nm">reflect</span><span class="add">原図にない</span><span class="ds">長い作業で得た学びを、スキルの編集に反映する</span></button><ol class="pipe"><li><b>手順</b><span>tooling / judgment / divergent ×3 → synthesizer</span></li></ol><div class="tags"><span class="tag t-grok">tooling · grok</span><span class="tag t-opus">他 3 役 · opus</span></div></article><article class="fan"><button type="button" class="fanhead" data-id="sk:teach"><span class="nm">teach</span><span class="add">原図にない</span><span class="ds">人が理解できるよう説明する</span></button><ol class="pipe"><li><b>手順</b><span>how と why を並列 → 1 本の説明</span></li></ol></article><article class="fan"><button type="button" class="fanhead" data-id="sk:figure-it-out"><span class="nm">figure-it-out</span><span class="add">原図にない</span><span class="ds">合うプレイブックがない時に、専用の手順を設計する</span></button><ol class="pipe"><li><b>手順</b><span>専用プレイブック → 仮説ループ → 決定ログ</span></li></ol></article></div>
+  </section>
+  <div class="conn" aria-hidden="true"><span></span><div>結果を整え、判断の根拠を名指しする</div></div>
+
+  <section class="row" aria-labelledby="r4"><div class="rail" id="r4">4 APPLY<span class="jp">葉スキル · 原則</span></div>
+    <div class="apply">
+      <div class="box"><h3>葉スキル 16</h3><p>単体で使える道具。ステップや常時トリガーから呼ばれる。</p><div class="leafs"><div class="leafg"><h5>文章</h5><div class="chips"><button type="button" class="chip" data-id="sk:unslop"><span class="nm">unslop</span><span class="ds">AI っぽい文を消す。返信にも常時適用</span></button><button type="button" class="chip" data-id="sk:technical-writing"><span class="nm">technical-writing</span><span class="ds">Diátaxis + Google style + STE の文書規格</span></button><button type="button" class="chip" data-id="sk:bro"><span class="nm">bro</span><span class="ds">直前の返信を平易に言い直す</span></button></div></div><div class="leafg"><h5>コード衛生</h5><div class="chips"><button type="button" class="chip" data-id="sk:no-comments"><span class="nm">no-comments</span><span class="ds">Comment Sicko を呼んで不要コメントを消す</span></button><button type="button" class="chip" data-id="sk:typescript-best-practices"><span class="nm">typescript-best-practices</span><span class="ds">型の規律を TS の書き方で具体化する</span></button><button type="button" class="chip" data-id="sk:tdd"><span class="nm">tdd</span><span class="ds">手軽な局所テストがある時に、失敗するテストから書く</span></button></div></div><div class="leafg"><h5>安全確認</h5><div class="chips"><button type="button" class="chip" data-id="sk:benchmark-checklist"><span class="nm">benchmark-checklist</span><span class="ds">計測値を報告前に吟味する</span></button><button type="button" class="chip" data-id="sk:blast-radius"><span class="nm">blast-radius</span><span class="ds">波及先を洗い出し、安全の根拠を実行して示す</span></button></div></div><div class="leafg"><h5>記録・文脈</h5><div class="chips"><button type="button" class="chip" data-id="sk:show-me-your-work"><span class="nm">show-me-your-work</span><span class="ds">決定ログを TSV で残す</span></button><button type="button" class="chip" data-id="sk:ketchup"><span class="nm">ketchup</span><span class="ds">前回以降の変化と判断待ちを列挙</span></button><button type="button" class="chip" data-id="sk:recall"><span class="nm">recall</span><span class="ds">自分の履歴から作業文脈を復元</span></button></div></div><div class="leafg"><h5>依頼を整える</h5><div class="chips"><button type="button" class="chip" data-id="sk:in-your-own-words"><span class="nm">in-your-own-words</span><span class="ds">ゴールと問題を言い直してから始める</span></button><button type="button" class="chip" data-id="sk:sharpen"><span class="nm">sharpen</span><span class="ds">プロンプトを深くして書き直す</span></button></div></div><div class="leafg"><h5>自己改善</h5><div class="chips"><button type="button" class="chip" data-id="sk:correct"><span class="nm">correct</span><span class="ds">繰り返す失敗を、構造で再発しないようにする</span></button><button type="button" class="chip" data-id="sk:automate-me"><span class="nm">automate-me</span><span class="ds">自分専用の -mode スキルを作る</span></button></div></div><div class="leafg"><h5>その他</h5><div class="chips"><button type="button" class="chip" data-id="sk:make-bot-ui"><span class="nm">make-bot-ui</span><span class="ds">Webhook でボットを起こすページを作る</span></button></div></div></div></div>
+      <div class="box pink"><h3>24 principles</h3><p>適用する原則は葉ファイルを読んでから引用し、変えた判断を返信で名指しする。</p><div class="prs"><div class="prg"><h5>core<small>10</small></h5><div class="minis"><button type="button" class="mini" data-id="pr:laziness-protocol">laziness-protocol</button><button type="button" class="mini" data-id="pr:foundational-thinking">foundational-thinking</button><button type="button" class="mini" data-id="pr:redesign-from-first-principles">redesign-from-first-principles</button><button type="button" class="mini" data-id="pr:attack-the-premise">attack-the-premise</button><button type="button" class="mini" data-id="pr:subtract-before-you-add">subtract-before-you-add</button><button type="button" class="mini" data-id="pr:minimize-reader-load">minimize-reader-load</button><button type="button" class="mini" data-id="pr:outcome-oriented-execution">outcome-oriented-execution</button><button type="button" class="mini" data-id="pr:experience-first">experience-first</button><button type="button" class="mini" data-id="pr:exhaust-the-design-space">exhaust-the-design-space</button><button type="button" class="mini" data-id="pr:build-the-lever">build-the-lever</button></div></div><div class="prg"><h5>architecture<small>6</small></h5><div class="minis"><button type="button" class="mini" data-id="pr:model-the-domain">model-the-domain</button><button type="button" class="mini" data-id="pr:boundary-discipline">boundary-discipline</button><button type="button" class="mini" data-id="pr:type-system-discipline">type-system-discipline</button><button type="button" class="mini" data-id="pr:make-operations-idempotent">make-operations-idempotent</button><button type="button" class="mini" data-id="pr:migrate-callers-then-delete-legacy-apis">migrate-callers-then-delete-legacy-apis</button><button type="button" class="mini" data-id="pr:separate-before-serializing-shared-state">separate-before-serializing-shared-state</button></div></div><div class="prg"><h5>verification<small>5</small></h5><div class="minis"><button type="button" class="mini" data-id="pr:prove-it-works">prove-it-works</button><button type="button" class="mini" data-id="pr:fix-root-causes">fix-root-causes</button><button type="button" class="mini" data-id="pr:sequence-verifiable-units">sequence-verifiable-units</button><button type="button" class="mini" data-id="pr:test-behavior-not-implementation">test-behavior-not-implementation</button><button type="button" class="mini" data-id="pr:explain-the-number">explain-the-number</button></div></div><div class="prg"><h5>delegation<small>2</small></h5><div class="minis"><button type="button" class="mini" data-id="pr:guard-the-context-window">guard-the-context-window</button><button type="button" class="mini" data-id="pr:never-block-on-the-human">never-block-on-the-human</button></div></div><div class="prg"><h5>meta<small>1</small></h5><div class="minis"><button type="button" class="mini" data-id="pr:encode-lessons-in-structure">encode-lessons-in-structure</button></div></div></div></div>
+    </div>
+  </section>
+  <div class="conn" aria-hidden="true"><span></span><div>実物で証明してから PR に</div></div>
+
+  <section class="row" aria-labelledby="r5"><div class="rail" id="r5">5 SHIP<span class="jp">証明と出荷</span></div>
+    <div class="ship">
+      <div class="box"><h3>実物での証明</h3><p>「動くはず」ではなく実画面・実数値で確かめる。検証スキルは、下の create- と maintain- で始まる 4 つのスキルで生成・保守する。</p>
+        <div class="tools"><button type="button" class="chip tool" data-id="tool:verify"><span class="nm">verify-&lt;app&gt; skill</span><span class="ds">プロジェクト固有の検証スキル。実画面を操作して振る舞いを証明</span></button><button type="button" class="chip tool" data-id="tool:formal"><span class="nm">formal verification skill</span><span class="ds">競合・再試行・状態機械など、テストでは確かめられない性質を形式検証する</span></button><button type="button" class="chip" data-id="sk:create-verification-skill"><span class="nm">create-verification-skill</span><span class="ds">verify-&lt;app&gt; スキルを生成</span></button><button type="button" class="chip" data-id="sk:maintain-verification-skill"><span class="nm">maintain-verification-skill</span><span class="ds">verify スキルの feature map を実アプリに合わせる</span></button><button type="button" class="chip" data-id="sk:create-formal-verification-skill"><span class="nm">create-formal-verification-skill</span><span class="ds">形式検証スキルを生成</span></button><button type="button" class="chip" data-id="sk:maintain-formal-verification-skill"><span class="nm">maintain-formal-verification-skill</span><span class="ds">コードを変更したあとに、形式検証のモデルを追従させる</span></button><button type="button" class="chip tool" data-id="tool:control"><span class="nm">control-ui / control-cli</span><span class="ds">ブラウザ・Electron・CLI・TUI を操作する（cursor-team-kit）</span></button><button type="button" class="chip tool" data-id="tool:watch-pr"><span class="nm">scripts/watch-pr</span><span class="ds">PR の状態を判定し、結果を JSON で出す。babysit と shipping が使う</span></button><button type="button" class="chip tool" data-id="tool:check-plan"><span class="nm">scripts/check-plan.mjs</span><span class="ds">計画書の lint。multi-phase-plan が使う</span></button><button type="button" class="chip tool" data-id="tool:orch"><span class="nm">scripts/orch/orch.ts</span><span class="ds">orchestrate の状態を記録する CLI。エージェントの起動も待機もしない</span></button><button type="button" class="chip tool" data-id="tool:worktree-audit"><span class="nm">scripts/worktree-audit.sh</span><span class="ds">worktree をサイズ・merge 状態で分類</span></button><button type="button" class="chip tool" data-id="tool:log"><span class="nm">show-me-your-work/scripts/log.sh</span><span class="ds">決定ログに 1 行追記</span></button></div>
+      </div>
+      <div class="box amber"><h3>小さく順序立てた PR</h3><p>説明文はブリーフィング形式。PR ごとに独立した判定を付け、決定ログは別モデルでも確認する。</p>
+        <div class="chips"><button type="button" class="chip" data-id="pb:opening-a-pr"><span class="nm">opening-a-pr</span><span class="ds">小さな commit 列と説明文で PR を開く。全プレイブックの最後に実行する</span></button><button type="button" class="chip tool" data-id="tool:deslop"><span class="nm">deslop</span><span class="ds">commit 前の掃除（cursor-team-kit）</span></button><button type="button" class="chip" data-id="pb:babysit"><span class="nm">babysit</span><span class="ds">競合 → レビュー → CI の順に対応し、merge できる状態にする</span></button><button type="button" class="chip" data-id="pb:shipping"><span class="nm">shipping</span><span class="ds">PR ごとに独立して判定し、下から順に land する</span></button></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="exec">
+    <div><button type="button" class="chip tool" data-id="tool:poteto-agent"><span class="nm">poteto-agent</span><span class="ds">プレイブック内で生成する委譲先。poteto-mode を全文読んでから動く</span></button><p>プレイブックのステップ内で生成する委譲先。ルーター自体の代わりには使わない。</p></div>
+    <div><button type="button" class="chip tool" data-id="tool:comment-sicko"><span class="nm">comment-sicko</span><span class="ds">読み取り専用のコメント審査役。no-comments が呼ぶ</span></button><p>コメントを読むだけ。コードは書かない。</p></div>
+    <div><button type="button" class="chip tool" data-id="tool:create-skill"><span class="nm">create-skill</span><span class="ds">Cursor 組み込みのスキル作成ガイド</span></button><p>ワークフロースキルは自分で <code>subagent_type</code> とモデルを決め、レビュアーが別系統のモデルになるようにする。</p></div>
+  </div>
+</main>
+
+<section class="inspector" id="insp" aria-live="polite" aria-label="選択中の項目">
+  <div><div class="k" id="ik">未選択</div><div class="t" id="it">プレイブックかスキルを押してください</div><div class="k" id="id"></div></div>
+  <button type="button" class="clear" id="clear" hidden>選択を解除（Esc）</button>
+  <div class="rel" id="ir"></div>
+</section>
+<p class="note">強調する関係は SKILL.md とプレイブック本文での明示参照（<code>**name**</code>、<code>/name</code>、「name skill」、パス参照）だけを数えています。全プレイブックの最後に走る <code>opening-a-pr</code> と、常時トリガー経由の呼び出しは関係に含めていません。</p>
+</div>
+<script>
+const NODES={"pb:investigation": {"name": "investigation", "desc": "読み取り専用の質問に、根拠付きで答える", "kind": "プレイブック"}, "pb:runtime-forensics": {"name": "runtime-forensics", "desc": "リークや空転を計装で診断。成果物は診断", "kind": "プレイブック"}, "pb:trace-forensics": {"name": "trace-forensics", "desc": "採取済みプロファイルを事後に診断", "kind": "プレイブック"}, "pb:bug-fix": {"name": "bug-fix", "desc": "再現 → 根本原因 → 実行時の証拠で修正", "kind": "プレイブック"}, "pb:perf-issue": {"name": "perf-issue", "desc": "計測した遅さをベースラインと比べて改善", "kind": "プレイブック"}, "pb:hillclimb": {"name": "hillclimb", "desc": "1 指標を仮説ループで改善。採用した改善ごとに 1 commit", "kind": "プレイブック"}, "pb:feature": {"name": "feature", "desc": "名前を付けたデータの形から振る舞いを作る", "kind": "プレイブック"}, "pb:refactoring": {"name": "refactoring", "desc": "振る舞いを変えずに構造を変える", "kind": "プレイブック"}, "pb:prototype": {"name": "prototype", "desc": "使い捨てのスケッチで設計の分岐を実験して決める", "kind": "プレイブック"}, "pb:visual-parity": {"name": "visual-parity", "desc": "2 つの実装の UI をピクセル単位で一致させる", "kind": "プレイブック"}, "pb:authoring-a-skill": {"name": "authoring-a-skill", "desc": "SKILL.md を書く・直す", "kind": "プレイブック"}, "pb:eval": {"name": "eval", "desc": "スキルやプロンプト変更の効果をブラインドで測る", "kind": "プレイブック"}, "pb:opening-a-pr": {"name": "opening-a-pr", "desc": "小さな commit 列と説明文で PR を開く。全プレイブックの最後に実行する", "kind": "プレイブック"}, "pb:babysit": {"name": "babysit", "desc": "競合 → レビュー → CI の順に対応し、merge できる状態にする", "kind": "プレイブック"}, "pb:shipping": {"name": "shipping", "desc": "PR ごとに独立して判定し、下から順に land する", "kind": "プレイブック"}, "pb:autonomous-run": {"name": "autonomous-run", "desc": "1 タスクを完了条件まで止まらず進める", "kind": "プレイブック"}, "pb:orchestrate": {"name": "orchestrate", "desc": "数日規模の計画を 1 コーディネーターが率いる", "kind": "プレイブック"}, "pb:autopilot-full": {"name": "autopilot-full", "desc": "独立した PR の列を、PR ごとに 1 人のオーナーが merge まで進める", "kind": "プレイブック"}, "pb:autopilot-stack": {"name": "autopilot-stack", "desc": "変更の列を 1 本の線形スタックにして渡す", "kind": "プレイブック"}, "pb:multi-phase-plan": {"name": "multi-phase-plan", "desc": "フェーズや積み PR にまたがる計画書を書く", "kind": "プレイブック"}, "pb:session-pickup": {"name": "session-pickup", "desc": "前のエージェントの作業を引き継ぐ", "kind": "プレイブック"}, "pb:pause-safely": {"name": "pause-safely", "desc": "再開できる形で作業を止める", "kind": "プレイブック"}, "pb:worktree-cleanup": {"name": "worktree-cleanup", "desc": "merge 済み worktree と古いシミュレータを削除", "kind": "プレイブック"}, "sk:how": {"name": "how", "desc": "仕組みを説明する", "kind": "スキル"}, "sk:why": {"name": "why", "desc": "なぜその形かを証拠で答える", "kind": "スキル"}, "sk:architect": {"name": "architect", "desc": "コードを書く前に型と境界を決める", "kind": "スキル"}, "sk:arena": {"name": "arena", "desc": "同じ課題の並列案から最良を作る", "kind": "スキル"}, "sk:swarm": {"name": "swarm", "desc": "並列のワーカーで網羅し、1 つの報告にまとめる", "kind": "スキル"}, "sk:interrogate": {"name": "interrogate", "desc": "複数のモデルで diff のあらを探す", "kind": "スキル"}, "sk:reflect": {"name": "reflect", "desc": "長い作業で得た学びを、スキルの編集に反映する", "kind": "スキル"}, "sk:teach": {"name": "teach", "desc": "人が理解できるよう説明する", "kind": "スキル"}, "sk:figure-it-out": {"name": "figure-it-out", "desc": "合うプレイブックがない時に、専用の手順を設計する", "kind": "スキル"}, "sk:unslop": {"name": "unslop", "desc": "AI っぽい文を消す。返信にも常時適用", "kind": "スキル"}, "sk:technical-writing": {"name": "technical-writing", "desc": "Diátaxis + Google style + STE の文書規格", "kind": "スキル"}, "sk:bro": {"name": "bro", "desc": "直前の返信を平易に言い直す", "kind": "スキル"}, "sk:no-comments": {"name": "no-comments", "desc": "Comment Sicko を呼んで不要コメントを消す", "kind": "スキル"}, "sk:typescript-best-practices": {"name": "typescript-best-practices", "desc": "型の規律を TS の書き方で具体化する", "kind": "スキル"}, "sk:tdd": {"name": "tdd", "desc": "手軽な局所テストがある時に、失敗するテストから書く", "kind": "スキル"}, "sk:benchmark-checklist": {"name": "benchmark-checklist", "desc": "計測値を報告前に吟味する", "kind": "スキル"}, "sk:blast-radius": {"name": "blast-radius", "desc": "波及先を洗い出し、安全の根拠を実行して示す", "kind": "スキル"}, "sk:show-me-your-work": {"name": "show-me-your-work", "desc": "決定ログを TSV で残す", "kind": "スキル"}, "sk:ketchup": {"name": "ketchup", "desc": "前回以降の変化と判断待ちを列挙", "kind": "スキル"}, "sk:recall": {"name": "recall", "desc": "自分の履歴から作業文脈を復元", "kind": "スキル"}, "sk:in-your-own-words": {"name": "in-your-own-words", "desc": "ゴールと問題を言い直してから始める", "kind": "スキル"}, "sk:sharpen": {"name": "sharpen", "desc": "プロンプトを深くして書き直す", "kind": "スキル"}, "sk:correct": {"name": "correct", "desc": "繰り返す失敗を、構造で再発しないようにする", "kind": "スキル"}, "sk:automate-me": {"name": "automate-me", "desc": "自分専用の -mode スキルを作る", "kind": "スキル"}, "sk:make-bot-ui": {"name": "make-bot-ui", "desc": "Webhook でボットを起こすページを作る", "kind": "スキル"}, "sk:create-verification-skill": {"name": "create-verification-skill", "desc": "verify-<app> スキルを生成", "kind": "スキル"}, "sk:maintain-verification-skill": {"name": "maintain-verification-skill", "desc": "verify スキルの feature map を実アプリに合わせる", "kind": "スキル"}, "sk:create-formal-verification-skill": {"name": "create-formal-verification-skill", "desc": "形式検証スキルを生成", "kind": "スキル"}, "sk:maintain-formal-verification-skill": {"name": "maintain-formal-verification-skill", "desc": "コードを変更したあとに、形式検証のモデルを追従させる", "kind": "スキル"}, "sk:poteto-help": {"name": "poteto-help", "desc": "どのスキルを使うか案内し、送るプロンプトを渡す", "kind": "スキル"}, "sk:setup-pstack": {"name": "setup-pstack", "desc": "role ごとのモデルを選び pstack-models.mdc に書く", "kind": "スキル"}, "sk:poteto-mode": {"name": "poteto-mode", "desc": "ルーター本体", "kind": "スキル"}, "pr:laziness-protocol": {"name": "laziness-protocol", "desc": "削除と最小の変更に寄せる", "kind": "原則（core）"}, "pr:foundational-thinking": {"name": "foundational-thinking", "desc": "ロジックの前に型とデータ構造", "kind": "原則（core）"}, "pr:redesign-from-first-principles": {"name": "redesign-from-first-principles", "desc": "新要件を最初からの前提として再設計", "kind": "原則（core）"}, "pr:attack-the-premise": {"name": "attack-the-premise", "desc": "同じ前提に立つ修正が 2 回失敗したら、前提を検証する", "kind": "原則（core）"}, "pr:subtract-before-you-add": {"name": "subtract-before-you-add", "desc": "先に削ってから足す", "kind": "原則（core）"}, "pr:minimize-reader-load": {"name": "minimize-reader-load", "desc": "読み手が追う層と隠れ状態を減らす", "kind": "原則（core）"}, "pr:outcome-oriented-execution": {"name": "outcome-oriented-execution", "desc": "移行は目標構成へ直行。互換の中間状態を作らない", "kind": "原則（core）"}, "pr:experience-first": {"name": "experience-first", "desc": "実装の都合よりユーザーの喜び", "kind": "原則（core）"}, "pr:exhaust-the-design-space": {"name": "exhaust-the-design-space", "desc": "前例がなければ 2–3 案を作って比べる", "kind": "原則（core）"}, "pr:build-the-lever": {"name": "build-the-lever", "desc": "手作業をせず、作業する道具か証明する道具を作る", "kind": "原則（core）"}, "pr:model-the-domain": {"name": "model-the-domain", "desc": "散らばった条件分岐でなく構造で表す", "kind": "原則（architecture）"}, "pr:boundary-discipline": {"name": "boundary-discipline", "desc": "ガードは境界に集め、内部の型は信頼", "kind": "原則（architecture）"}, "pr:type-system-discipline": {"name": "type-system-discipline", "desc": "不正な状態を表現できない型にする", "kind": "原則（architecture）"}, "pr:make-operations-idempotent": {"name": "make-operations-idempotent", "desc": "何度走っても同じ終状態", "kind": "原則（architecture）"}, "pr:migrate-callers-then-delete-legacy-apis": {"name": "migrate-callers-then-delete-legacy-apis", "desc": "呼び出し元を移行し、旧 API も同じ回の作業で削除する", "kind": "原則（architecture）"}, "pr:separate-before-serializing-shared-state": {"name": "separate-before-serializing-shared-state", "desc": "共有をなくしてから直列化を考える", "kind": "原則（architecture）"}, "pr:prove-it-works": {"name": "prove-it-works", "desc": "代理指標でなく本物で検証", "kind": "原則（verification）"}, "pr:fix-root-causes": {"name": "fix-root-causes", "desc": "最初に壊れた場所で直す", "kind": "原則（verification）"}, "pr:sequence-verifiable-units": {"name": "sequence-verifiable-units", "desc": "検証できる小さな単位で積む", "kind": "原則（verification）"}, "pr:test-behavior-not-implementation": {"name": "test-behavior-not-implementation", "desc": "利用者に見える振る舞いをテスト", "kind": "原則（verification）"}, "pr:explain-the-number": {"name": "explain-the-number", "desc": "数値の律速と測定対象を確かめる", "kind": "原則（verification）"}, "pr:guard-the-context-window": {"name": "guard-the-context-window", "desc": "大きな出力はサブエージェントに任せ、要約だけ戻す", "kind": "原則（delegation）"}, "pr:never-block-on-the-human": {"name": "never-block-on-the-human", "desc": "可逆なら進めて結果を見せる", "kind": "原則（delegation）"}, "pr:encode-lessons-in-structure": {"name": "encode-lessons-in-structure", "desc": "2 回目の指示は lint・スクリプトにする", "kind": "原則（meta）"}, "tool:verify": {"name": "verify-<app> skill", "desc": "プロジェクト固有の検証スキル。実画面を操作して振る舞いを証明", "kind": "実行・検証"}, "tool:formal": {"name": "formal verification skill", "desc": "競合・再試行・状態機械など、テストでは確かめられない性質を形式検証する", "kind": "実行・検証"}, "tool:control": {"name": "control-ui / control-cli", "desc": "ブラウザ・Electron・CLI・TUI を操作する（cursor-team-kit）", "kind": "実行・検証"}, "tool:deslop": {"name": "deslop", "desc": "commit 前の掃除（cursor-team-kit）", "kind": "実行・検証"}, "tool:watch-pr": {"name": "scripts/watch-pr", "desc": "PR の状態を判定し、結果を JSON で出す。babysit と shipping が使う", "kind": "実行・検証"}, "tool:check-plan": {"name": "scripts/check-plan.mjs", "desc": "計画書の lint。multi-phase-plan が使う", "kind": "実行・検証"}, "tool:orch": {"name": "scripts/orch/orch.ts", "desc": "orchestrate の状態を記録する CLI。エージェントの起動も待機もしない", "kind": "実行・検証"}, "tool:worktree-audit": {"name": "scripts/worktree-audit.sh", "desc": "worktree をサイズ・merge 状態で分類", "kind": "実行・検証"}, "tool:log": {"name": "show-me-your-work/scripts/log.sh", "desc": "決定ログに 1 行追記", "kind": "実行・検証"}, "tool:create-skill": {"name": "create-skill", "desc": "Cursor 組み込みのスキル作成ガイド", "kind": "実行・検証"}, "tool:poteto-agent": {"name": "poteto-agent", "desc": "プレイブック内で生成する委譲先。poteto-mode を全文読んでから動く", "kind": "実行・検証"}, "tool:comment-sicko": {"name": "comment-sicko", "desc": "読み取り専用のコメント審査役。no-comments が呼ぶ", "kind": "実行・検証"}};
+const OUT={"pb:authoring-a-skill": ["pr:encode-lessons-in-structure", "tool:create-skill"], "pb:autonomous-run": ["pr:sequence-verifiable-units", "sk:show-me-your-work"], "pb:autopilot-full": ["pb:babysit", "pb:opening-a-pr", "pb:shipping", "sk:ketchup", "sk:no-comments", "sk:show-me-your-work", "sk:swarm", "tool:control", "tool:deslop"], "pb:autopilot-stack": ["pb:shipping", "sk:ketchup"], "pb:babysit": ["pb:autopilot-full", "pb:shipping", "tool:watch-pr"], "pb:bug-fix": ["pr:sequence-verifiable-units", "sk:architect", "sk:how", "sk:interrogate", "sk:tdd", "sk:why"], "pb:eval": ["sk:arena"], "pb:feature": ["pr:model-the-domain", "pr:separate-before-serializing-shared-state", "pr:sequence-verifiable-units", "sk:architect", "sk:arena", "sk:how", "sk:interrogate"], "pb:hillclimb": ["pb:autonomous-run", "pb:perf-issue", "pr:build-the-lever", "pr:guard-the-context-window", "pr:laziness-protocol", "pr:prove-it-works", "pr:separate-before-serializing-shared-state", "pr:sequence-verifiable-units", "sk:benchmark-checklist", "sk:how", "sk:show-me-your-work"], "pb:investigation": ["sk:architect", "sk:how", "sk:unslop", "sk:why"], "pb:multi-phase-plan": ["pb:autopilot-full", "pb:autopilot-stack", "pb:opening-a-pr", "pb:orchestrate", "pb:prototype", "pb:shipping", "pr:encode-lessons-in-structure", "pr:guard-the-context-window", "pr:never-block-on-the-human", "pr:prove-it-works", "pr:sequence-verifiable-units", "sk:how", "sk:interrogate", "sk:no-comments", "sk:show-me-your-work", "sk:swarm", "sk:technical-writing", "sk:unslop", "tool:check-plan", "tool:control", "tool:deslop", "tool:poteto-agent"], "pb:opening-a-pr": ["pb:babysit", "pb:shipping", "sk:interrogate", "sk:no-comments", "sk:technical-writing", "sk:unslop", "tool:deslop"], "pb:orchestrate": ["pb:babysit", "pr:encode-lessons-in-structure", "pr:separate-before-serializing-shared-state", "sk:arena", "sk:show-me-your-work", "tool:control", "tool:orch"], "pb:pause-safely": ["sk:show-me-your-work"], "pb:perf-issue": ["pb:hillclimb", "pr:sequence-verifiable-units", "sk:architect", "sk:benchmark-checklist", "sk:how"], "pb:prototype": ["pr:exhaust-the-design-space", "sk:architect"], "pb:refactoring": ["pr:foundational-thinking", "pr:laziness-protocol", "pr:migrate-callers-then-delete-legacy-apis", "pr:minimize-reader-load", "pr:model-the-domain", "pr:prove-it-works", "pr:redesign-from-first-principles", "pr:sequence-verifiable-units", "pr:subtract-before-you-add", "sk:architect", "sk:figure-it-out", "sk:how"], "pb:runtime-forensics": ["pr:guard-the-context-window"], "pb:session-pickup": ["pr:guard-the-context-window", "pr:prove-it-works"], "pb:shipping": ["pb:babysit", "tool:control", "tool:watch-pr"], "pb:trace-forensics": ["pr:guard-the-context-window"], "pb:visual-parity": ["pr:separate-before-serializing-shared-state"], "pb:worktree-cleanup": ["pr:build-the-lever", "pr:encode-lessons-in-structure", "pr:guard-the-context-window", "pr:prove-it-works", "tool:worktree-audit"], "sk:architect": ["pr:exhaust-the-design-space", "pr:fix-root-causes", "pr:foundational-thinking", "pr:outcome-oriented-execution", "pr:redesign-from-first-principles", "pr:subtract-before-you-add", "sk:arena", "sk:how", "sk:interrogate", "sk:why"], "sk:arena": ["pr:prove-it-works", "pr:redesign-from-first-principles", "pr:separate-before-serializing-shared-state"], "sk:automate-me": ["sk:unslop", "tool:create-skill", "tool:verify"], "sk:blast-radius": ["sk:arena", "sk:how", "sk:unslop", "sk:why"], "sk:create-formal-verification-skill": ["sk:maintain-formal-verification-skill", "tool:formal"], "sk:create-verification-skill": ["sk:maintain-verification-skill", "tool:verify"], "sk:figure-it-out": ["pr:encode-lessons-in-structure", "pr:foundational-thinking", "pr:laziness-protocol", "pr:never-block-on-the-human", "pr:prove-it-works", "pr:separate-before-serializing-shared-state", "pr:sequence-verifiable-units", "sk:architect", "sk:arena", "sk:show-me-your-work"], "sk:ketchup": ["sk:bro"], "sk:maintain-formal-verification-skill": ["sk:create-formal-verification-skill", "tool:formal"], "sk:maintain-verification-skill": ["sk:create-verification-skill", "tool:verify"], "sk:no-comments": ["pr:fix-root-causes", "pr:redesign-from-first-principles", "sk:architect", "sk:how", "sk:why", "tool:comment-sicko"], "sk:recall": ["sk:automate-me", "sk:unslop", "sk:why"], "sk:reflect": ["pr:encode-lessons-in-structure", "tool:create-skill"], "sk:show-me-your-work": ["pr:encode-lessons-in-structure", "sk:unslop", "tool:log"], "sk:teach": ["sk:how", "sk:unslop", "sk:why"], "sk:technical-writing": ["sk:unslop"], "sk:typescript-best-practices": ["pr:boundary-discipline", "pr:type-system-discipline"], "sk:why": ["sk:how"]};
+const IN={};for(const[a,bs]of Object.entries(OUT))for(const b of bs)(IN[b]??=[]).push(a);
+const board=document.getElementById('board'),els=[...document.querySelectorAll('[data-id]')];
+const ik=document.getElementById('ik'),it=document.getElementById('it'),idd=document.getElementById('id'),ir=document.getElementById('ir'),clr=document.getElementById('clear');
+let cur=null;
+const list=ids=>ids&&ids.length?ids.map(i=>`<code>${NODES[i]?NODES[i].name:i}</code>`).join('、'):'—';
+function select(id){
+  cur=(cur===id)?null:id;
+  const o=new Set(cur?OUT[cur]||[]:[]),n=new Set(cur?IN[cur]||[]:[]);
+  board.classList.toggle('has-sel',!!cur);
+  for(const e of els){const d=e.dataset.id;e.classList.toggle('is-sel',d===cur);e.classList.toggle('is-out',o.has(d)&&d!==cur);e.classList.toggle('is-in',n.has(d)&&!o.has(d)&&d!==cur);e.setAttribute('aria-pressed',d===cur)}
+  clr.hidden=!cur;
+  if(!cur){ik.textContent='未選択';it.textContent='プレイブックかスキルを押してください';idd.textContent='';ir.innerHTML='';return}
+  const nd=NODES[cur];ik.textContent=nd.kind;it.textContent=nd.name;idd.textContent=nd.desc;
+  const grp=ids=>{const g={};for(const i of ids||[]){const k=i.split(':')[0];(g[k]??=[]).push(i)};return g};
+  const lab={pb:'プレイブック',sk:'スキル',pr:'原則',tool:'実行・検証'};
+  const fmt=ids=>{const g=grp(ids);const ks=Object.keys(g);return ks.length?ks.map(k=>`${lab[k]}: ${list(g[k])}`).join(' ／ '):'—'};
+  ir.innerHTML=`<div><b>呼ぶもの</b>${fmt(OUT[cur])}</div><div><b>呼ばれる元</b>${fmt(IN[cur])}</div>`;
+}
+for(const e of els)e.addEventListener('click',()=>select(e.dataset.id));
+clr.addEventListener('click',()=>select(cur));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&cur)select(cur)});
+const tb=document.getElementById('theme'),modes=['auto','light','dark'],lbl={auto:'自動',light:'ライト',dark:'ダーク'};let m=0;
+tb.addEventListener('click',()=>{m=(m+1)%3;const v=modes[m];if(v==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=v;tb.textContent='表示: '+lbl[v]});
+</script>
+</body>
+</html>

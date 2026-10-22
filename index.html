@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pstack notes</title>
+<style>
+/* palette: ayu Light / ayu Dark。各ページと同じトークン */
+:root{--ground:#EBEEF0;--card:#FCFCFC;--ink:#474C52;--muted:#626A75;--opus:rgba(250,133,50,.14);--opus-i:#7E4B01;--sel:#035BD6;
+  --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;--serif:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;--mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --ring:0 0 0 1px oklch(0 0 0 / .08),0 1px 2px -1px oklch(0 0 0 / .08),0 2px 4px 0 oklch(0 0 0 / .05)}
+@media (prefers-color-scheme:dark){:root{--ground:#0D1017;--card:#141821;--ink:#BFBDB6;--muted:#8A909C;--opus:rgba(255,143,64,.12);--opus-i:#FF8F40;--sel:#73B8FF;--ring:0 0 0 1px oklch(1 0 0 / .1)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding:56px 24px 96px;display:grid;gap:28px}
+.kicker{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+h1{font-size:34px;line-height:1.2;font-weight:800;margin:6px 0 10px}
+.lead{font-family:var(--serif);font-size:16px;line-height:1.75;color:var(--muted);margin:0;max-width:62ch;text-wrap:pretty}
+.docs{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.docs a{display:grid;gap:6px;padding:16px 18px;border-radius:12px;background:var(--card);box-shadow:var(--ring);color:inherit;text-decoration:none;transition:box-shadow 150ms ease-out}
+.docs a:hover{box-shadow:0 0 0 1px var(--sel)}
+.docs a:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.docs .tag{justify-self:start;font-size:11.5px;font-weight:700;color:var(--opus-i);background:var(--opus);border-radius:4px;padding:1px 8px}
+.docs b{font-size:17px}
+.docs span{font-size:12.5px;color:var(--muted)}
+.docs code{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);margin:0}
+.note a{color:inherit}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">Cursor プラグイン · cursor/plugins</div>
+  <h1>pstack notes</h1>
+  <p class="lead">Cursor プラグイン pstack の中身を読み解くためにまとめた図解です。全体構成を見てから、プレイブックの共通形に進むと読みやすい順番になっています。</p>
+</header>
+<ul class="docs">
+  <li><a href="pstack-skeleton.html"><span class="tag">構成図</span><b>pstack の全体構成</b><span>1 つのルーター、23 のプレイブック、9 つの並列ワークフローを「振り分け → 手順 → 並列化 → 適用 → 出荷」の 5 段で示す。項目を押すと参照関係を表示。</span><code>pstack-skeleton.html</code></a></li>
+  <li><a href="pstack-playbooks.html"><span class="tag">参考資料</span><b>pstack のプレイブック</b><span>23 本に共通する 5 つの部品と、繰り返し出てくる 7 つの考え方。受け渡しの流れと 1 本の大きさも並べる。</span><code>pstack-playbooks.html</code></a></li>
+</ul>
+<p class="note">出典: <a href="https://github.com/cursor/plugins/tree/main/pstack">cursor/plugins/pstack</a>（2026-10 時点の main）。内容の解釈部分は各ページに明記しています。</p>
+</div>
+</body>
+</html>

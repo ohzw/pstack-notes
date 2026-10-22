@@ -1,0 +1,22 @@
+# pstack notes
+
+Cursor プラグイン [pstack](https://github.com/cursor/plugins/tree/main/pstack) の理解を深めるためにまとめた図解資料です。
+
+| ファイル | 内容 |
+| --- | --- |
+| [`index.html`](index.html) | 目次 |
+| [`pstack-skeleton.html`](pstack-skeleton.html) | 全体構成図。ルーター・23 プレイブック・並列ワークフロー・葉スキル・原則・出荷の 5 段。項目を押すと参照関係を表示 |
+| [`pstack-playbooks.html`](pstack-playbooks.html) | プレイブック 23 本に共通する 5 つの部品と 7 つの考え方 |
+
+## 見方
+
+ビルド不要の静的 HTML です。ブラウザで直接開いてください。
+
+```sh
+open index.html
+```
+
+## 出典
+
+- [cursor/plugins/pstack](https://github.com/cursor/plugins/tree/main/pstack)（pstack v0.15.29、2026-10 時点の main）
+- 本文の要約と、本文を読み比べた解釈を含みます。解釈部分は各ページで「解釈」と表示しています。
