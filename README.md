@@ -11,6 +11,7 @@ Cursor プラグイン [pstack](https://github.com/cursor/plugins/tree/main/psta
 | [`pstack-playbook-fanout.html`](pstack-playbook-fanout.html) | プレイブックと fan out（サブエージェントの並列起動）の関係。並列起動スキルに共通する 4 段、9 スキルの並列化と集約の方法、orchestrate との違い |
 | [`pstack-playbooks.html`](pstack-playbooks.html) | プレイブック 23 本に共通する 5 つの部品と 7 つの考え方 |
 | [`pstack-review.html`](pstack-review.html) | レビュー体制。5 段の検査の起動条件と合格基準、/interrogate、Bugbot の仕分け、独立検証の判定 |
+| [`pstack-models.html`](pstack-models.html) | モデル割り当て。/setup-pstack の 17 の役割と既定モデル、混成パネル、推論予算、Claude Code での読み替え、割り当て例 |
 
 ## 見方
 
