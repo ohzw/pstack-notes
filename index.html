@@ -37,7 +37,7 @@ h1{font-size:34px;line-height:1.2;font-weight:700;margin:6px 0 10px}
 <header>
   <div class="kicker">Cursor プラグイン · cursor/plugins</div>
   <h1>pstack notes</h1>
-  <p class="lead">Cursor プラグイン pstack の中身を読み解くためにまとめた図解です。上から順に読むと、全体構成、プレイブックと並列起動スキルの関係、プレイブックの共通形、レビュー体制、モデルの割り当ての順に、全体から細部へ進めます。最後の章は、作者自身が X に書いた使い方ガイドの要約です。</p>
+  <p class="lead">Cursor プラグイン pstack の中身を読み解くためにまとめた図解です。上から順に読むと、全体構成、プレイブックと並列起動スキルの関係、プレイブックの共通形、レビュー体制、モデルの割り当て、長い作業でのコンテキストの守り方の順に、全体から細部へ進めます。最後の章は、作者自身が X に書いた使い方ガイドの要約です。</p>
 </header>
 <ol class="docs">
   <li><a href="pstack-skeleton.html"><span class="tag">1 · 構成図</span><b>pstack の全体構成</b><span>1 つのルーター、23 のプレイブック、サブエージェントを並列起動する 9 つのスキルを「振り分け → 手順 → 並列化 → 適用 → 出荷」の 5 段で示す。項目を押すと参照関係を表示。</span><code>pstack-skeleton.html</code></a></li>
@@ -45,9 +45,10 @@ h1{font-size:34px;line-height:1.2;font-weight:700;margin:6px 0 10px}
   <li><a href="pstack-playbooks.html"><span class="tag">3 · 参考資料</span><b>pstack のプレイブック</b><span>23 本に共通する 5 つの部品と、繰り返し出てくる 7 つの考え方。受け渡しの流れと 1 本の大きさも並べる。</span><code>pstack-playbooks.html</code></a></li>
   <li><a href="pstack-review.html"><span class="tag">4 · 参考資料</span><b>pstack のレビュー体制</b><span>仕上げ・敵対レビュー・Babysit・独立検証・着地の 5 段について、いつ動かし、何を満たせば通るかを並べる。ボット指摘の仕分けと、合格に数えないものの一覧も載せる。</span><code>pstack-review.html</code></a></li>
   <li><a href="pstack-models.html"><span class="tag">5 · 参考資料</span><b>pstack のモデル割り当て</b><span>/setup-pstack が書く 17 の役割の行を、集める役・まとめる役・比べる役の 3 つの型で整理する。推論予算と起動ごとの上げ下げ、Claude Code での読み替え、割り当て例も載せる。</span><code>pstack-models.html</code></a></li>
-  <li><a href="pstack-guide.html"><span class="tag">6 · 記事要約</span><b>作者による pstack ガイド</b><span>作者 lauren の連載「The Complete Guide to pstack」Pt. 1・Pt. 2 を 1 章にまとめる。検証スキルの作り方と使い方、自分の言葉で言い直させる頼み方、README と試作と /architect で設計する流れ、計画と実践例を並べる。</span><code>pstack-guide.html</code></a></li>
+  <li><a href="pstack-context.html"><span class="tag">6 · 解説</span><b>コンテキストの守り方</b><span>プレイブックを連ねる長い作業で、Compaction に頼らずに進めるための規約。メインチャットに入れるもの、ファイルに置く状態、規模ごとの体制、Pause safely と Session pickup による引き継ぎを図で示す。</span><code>pstack-context.html</code></a></li>
+  <li><a href="pstack-guide.html"><span class="tag">7 · 記事要約</span><b>作者による pstack ガイド</b><span>作者 lauren の連載「The Complete Guide to pstack」Pt. 1・Pt. 2 を 1 章にまとめる。検証スキルの作り方と使い方、自分の言葉で言い直させる頼み方、README と試作と /architect で設計する流れ、計画と実践例を並べる。</span><code>pstack-guide.html</code></a></li>
 </ol>
-<p class="note">出典: <a href="https://github.com/cursor/plugins/tree/main/pstack">cursor/plugins/pstack</a>（2026-10 時点の main）。6 章は lauren（<a href="https://x.com/poteto">@poteto</a>）の X 記事の要約です。内容の解釈部分は各ページに明記しています。</p>
+<p class="note">出典: <a href="https://github.com/cursor/plugins/tree/main/pstack">cursor/plugins/pstack</a>（2026-10 時点の main）。7 章は lauren（<a href="https://x.com/poteto">@poteto</a>）の X 記事の要約です。内容の解釈部分は各ページに明記しています。</p>
 </div>
 </body>
 </html>

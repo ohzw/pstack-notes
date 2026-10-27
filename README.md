@@ -12,6 +12,7 @@ Cursor プラグイン [pstack](https://github.com/cursor/plugins/tree/main/psta
 | [`pstack-playbooks.html`](pstack-playbooks.html) | プレイブック 23 本に共通する 5 つの部品と 7 つの考え方 |
 | [`pstack-review.html`](pstack-review.html) | レビュー体制。5 段の検査の起動条件と合格基準、/interrogate、Bugbot の仕分け、独立検証の判定 |
 | [`pstack-models.html`](pstack-models.html) | モデル割り当て。/setup-pstack の 17 の役割と既定モデル、混成パネル、推論予算、Claude Code での読み替え、割り当て例 |
+| [`pstack-context.html`](pstack-context.html) | コンテキストの守り方。プレイブックを連ねる長い作業で Compaction に頼らないための規約。情報の置き場所、状態をファイルに置く仕組み、規模ごとの体制、Pause safely と Session pickup による引き継ぎ、限界と読む順番 |
 | [`pstack-guide.html`](pstack-guide.html) | 作者による pstack ガイド。X の連載 Pt. 1・Pt. 2 の要約を 1 章にまとめたもの。検証スキル、自分の言葉で言い直させる頼み方、README・試作・/architect による設計、計画と実践例 |
 | [`articles/pstack-guide-pt1.md`](articles/pstack-guide-pt1.md) | 「The Complete Guide to pstack Pt. 1」の日本語要約（Markdown） |
 | [`articles/pstack-guide-pt2.md`](articles/pstack-guide-pt2.md) | 「The Complete Guide to pstack Pt. 2」の日本語要約（Markdown） |

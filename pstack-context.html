@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pstack のコンテキストの守り方</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* palette: ayu Light / ayu Dark (npm ayu 9.1.0). pstack-skeleton.html と同じトークン。--accent だけこのページで追加 */
+:root{
+  --ground:#EBEEF0; --card:#FCFCFC; --ink:#474C52; --muted:#626A75; --line:rgba(107,125,143,.24); --soft:#F3F4F5;
+  --amber:rgba(242,151,24,.12); --amber-b:rgba(242,151,24,.6); --blue:rgba(34,164,230,.1); --blue-b:rgba(34,164,230,.42); --pink:rgba(163,122,204,.1); --pink-b:rgba(163,122,204,.6);
+  --sel:#035BD6; --on-sel:#FFFFFF; --sel-soft:rgba(3,91,214,.12); --grok:rgba(134,179,0,.14); --grok-i:#4F6900; --opus:rgba(250,133,50,.14); --opus-i:#7E4B01;
+  --sans:"Noto Sans JP",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --ring:0 0 0 1px oklch(0 0 0 / .08),0 1px 2px -1px oklch(0 0 0 / .08),0 2px 4px 0 oklch(0 0 0 / .05);
+  --float:0 8px 28px rgba(107,125,143,.24);
+}
+@media (prefers-color-scheme:dark){:root{
+  --ground:#0D1017; --card:#141821; --ink:#BFBDB6; --muted:#8A909C; --line:#262C38; --soft:#10141C;
+  --amber:rgba(230,180,80,.1); --amber-b:rgba(230,180,80,.55); --blue:rgba(89,194,255,.08); --blue-b:rgba(89,194,255,.4); --pink:rgba(210,166,255,.08); --pink-b:rgba(210,166,255,.45);
+  --sel:#73B8FF; --on-sel:#0D1017; --sel-soft:rgba(115,184,255,.18); --grok:rgba(170,217,76,.12); --grok-i:#AAD94C; --opus:rgba(255,143,64,.12); --opus-i:#FF8F40;
+  --ring:0 0 0 1px oklch(1 0 0 / .1);
+  --float:0 8px 28px rgba(0,0,0,.5);
+}}
+:root[data-theme="light"]{
+  --ground:#EBEEF0; --card:#FCFCFC; --ink:#474C52; --muted:#626A75; --line:rgba(107,125,143,.24); --soft:#F3F4F5;
+  --amber:rgba(242,151,24,.12); --amber-b:rgba(242,151,24,.6); --blue:rgba(34,164,230,.1); --blue-b:rgba(34,164,230,.42); --pink:rgba(163,122,204,.1); --pink-b:rgba(163,122,204,.6);
+  --sel:#035BD6; --on-sel:#FFFFFF; --sel-soft:rgba(3,91,214,.12); --grok:rgba(134,179,0,.14); --grok-i:#4F6900; --opus:rgba(250,133,50,.14); --opus-i:#7E4B01;
+  --ring:0 0 0 1px oklch(0 0 0 / .08),0 1px 2px -1px oklch(0 0 0 / .08),0 2px 4px 0 oklch(0 0 0 / .05);
+  --float:0 8px 28px rgba(107,125,143,.24);
+}
+:root[data-theme="dark"]{
+  --ground:#0D1017; --card:#141821; --ink:#BFBDB6; --muted:#8A909C; --line:#262C38; --soft:#10141C;
+  --amber:rgba(230,180,80,.1); --amber-b:rgba(230,180,80,.55); --blue:rgba(89,194,255,.08); --blue-b:rgba(89,194,255,.4); --pink:rgba(210,166,255,.08); --pink-b:rgba(210,166,255,.45);
+  --sel:#73B8FF; --on-sel:#0D1017; --sel-soft:rgba(115,184,255,.18); --grok:rgba(170,217,76,.12); --grok-i:#AAD94C; --opus:rgba(255,143,64,.12); --opus-i:#FF8F40;
+  --ring:0 0 0 1px oklch(1 0 0 / .1);
+  --float:0 8px 28px rgba(0,0,0,.5);
+}
+/* ここから pstack-skeleton.html と同じ定義 */
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.lead,.box p,.ds,.note{text-wrap:pretty}
+.box h3{text-wrap:balance}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+.wrap{max-width:1320px;margin:0 auto;padding:40px 28px 120px;display:grid;gap:24px}
+header{display:grid;gap:14px;max-width:880px}
+.kicker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.kicker .tag-doc{color:var(--opus-i);background:var(--opus);border-radius:4px;padding:2px 8px;letter-spacing:.04em}
+.kicker .home{color:inherit;text-decoration:none;letter-spacing:.04em}
+.kicker .home:hover{color:var(--ink)}
+h1{font-size:34px;line-height:1.2;font-weight:700;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1 .sub{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--muted);letter-spacing:0;word-break:keep-all;overflow-wrap:anywhere}
+.lead{font-size:16px;line-height:1.75;color:var(--muted);margin:0;max-width:62ch}
+.lead strong{color:var(--ink);font-weight:600}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.facts li{display:grid;gap:0;padding:8px 14px;border-radius:10px;background:var(--card);box-shadow:var(--ring);min-width:108px}
+.facts b{font-size:22px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--ink)}
+.facts span{font-size:11.5px;color:var(--muted)}
+.meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.meta a{color:inherit}
+.toolbar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);align-items:center}
+.themebtn{font:inherit;font-size:12px;color:var(--ink);background:var(--card);border:0;box-shadow:var(--ring);border-radius:6px;padding:4px 10px;cursor:pointer;position:relative;transition-property:scale;transition-duration:150ms;transition-timing-function:ease-out}
+.themebtn:active{scale:.96}
+.themebtn::after{content:"";position:absolute;inset:min(0px,calc(50% - 20px))}
+.board{background:var(--card);box-shadow:var(--ring);border-radius:14px;padding:28px 28px 20px;display:grid;gap:0}
+.row{display:grid;grid-template-columns:116px 1fr;gap:20px;align-items:start}
+.rail{padding-top:14px;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted);display:grid;gap:2px}
+.rail .jp{letter-spacing:.02em;font-weight:500;font-size:12px}
+.conn{display:grid;grid-template-columns:116px 1fr;gap:20px;height:34px}
+.conn div{display:flex;align-items:center;gap:8px;padding-left:24px;font-size:11px;color:var(--muted);position:relative}
+.conn div::before{content:"";width:1px;height:100%;background:var(--muted);position:absolute;left:18px;top:0}
+.conn div::after{content:"";position:absolute;left:14px;bottom:0;border:4px solid transparent;border-top:6px solid var(--muted)}
+.box{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--card);display:grid;gap:10px;align-content:start}
+.box h3{margin:0;font-size:15px;font-weight:700}
+.box p{margin:0;color:var(--muted);font-size:12.5px}
+.box.amber{background:var(--amber);border-color:var(--amber-b)}
+.box.blue{background:var(--blue);border-color:var(--blue-b)}
+.box.pink{background:var(--pink);border-color:var(--pink-b)}
+.box code{font-family:var(--mono);font-size:12px}
+.steps{column-count:3;column-gap:16px}
+.pbg{break-inside:avoid;display:grid;gap:0;padding-bottom:12px}
+.pbg h4{margin:0 0 6px;font-size:12px;font-weight:700;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pbg h4 small{font-weight:400;color:var(--muted);font-size:11px}
+.chips{display:grid;gap:6px}
+.chip{display:grid;gap:1px;padding:6px 10px;box-shadow:var(--ring);background:var(--card);border-radius:8px}
+.chip .nm{font-family:var(--mono);font-size:12.5px;font-weight:600}
+.chip .ds{font-size:11.5px;color:var(--muted);line-height:1.4}
+.mini{font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:999px;white-space:nowrap;box-shadow:var(--ring);background:var(--card)}
+.minis{display:flex;flex-wrap:wrap;gap:6px}
+.add{justify-self:start;font-size:10px;letter-spacing:.06em;color:var(--muted);border:1px dashed var(--line);border-radius:4px;padding:0 5px;font-weight:500}
+.note{font-size:12px;color:var(--muted);max-width:90ch;margin:0}
+/* ここからこのページ固有（cx- で始まる） */
+:root{--accent:#A85C00}
+@media (prefers-color-scheme:dark){:root{--accent:#E6B450}}
+:root[data-theme="light"]{--accent:#A85C00}
+:root[data-theme="dark"]{--accent:#E6B450}
+.row.wide{grid-template-columns:1fr;gap:10px}
+.row.wide .rail{padding-top:0;grid-auto-flow:column;justify-content:start;align-items:baseline;gap:10px}
+.row + .row{margin-top:28px;padding-top:24px;border-top:1px solid var(--line)}
+.cx-body{display:grid;gap:14px;min-width:0}
+.cx-body > p{margin:0;font-size:13px;max-width:78ch;text-wrap:pretty}
+.cx-body p code,.cx-t code,.cx-l code{font-family:var(--mono);font-size:11.5px}
+.cx-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cx-two .box{gap:8px}
+.cx-two .box h3,.cx-rules .box h3{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.cx-two .box h3 small,.cx-rules .box h3 small{font-weight:400;font-size:11px;color:var(--muted)}
+.cx-def{margin:0;font-size:13.5px;line-height:1.6;color:var(--ink)!important}
+.cx-k{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.cx-fig{margin:0;overflow-x:auto}
+.cx-fig svg{display:block;width:100%;height:auto;min-width:880px}
+.cx-fig figcaption{font-size:12px;color:var(--muted);margin:6px 0 0}
+.cx-fig .n{fill:var(--card);stroke:var(--muted);stroke-opacity:.75;stroke-width:1}
+.cx-fig .n.f{fill:var(--amber);stroke:var(--accent);stroke-opacity:1;stroke-width:1.2}
+.cx-fig .n.w{fill:var(--blue);stroke:var(--blue-b);stroke-opacity:1}
+.cx-fig .n.opt{stroke-dasharray:4 3}
+.cx-fig .zn{fill:none;stroke:var(--muted);stroke-opacity:.6;stroke-width:1;stroke-dasharray:5 4}
+.cx-fig .zn.main{fill:var(--amber);stroke:var(--accent);stroke-opacity:1;stroke-width:1.2}
+.cx-fig .zn.sub{fill:var(--blue);stroke:var(--blue-b);stroke-opacity:1}
+.cx-fig .zn.disk{fill:var(--soft)}
+.cx-fig .zt{font-family:var(--sans);font-size:12px;font-weight:700;fill:var(--muted)}
+.cx-fig .zt.a{fill:var(--accent)}
+.cx-fig .nt{font-family:var(--sans);font-size:13px;font-weight:700;fill:var(--ink)}
+.cx-fig .nj{font-family:var(--sans);font-size:12px;fill:var(--muted)}
+.cx-fig .ns{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.cx-fig .e{stroke:var(--muted);stroke-width:1.2;fill:none}
+.cx-fig .e.d{stroke-dasharray:5 4}
+.cx-fig .mk{fill:var(--muted)}
+.cx-fig .lt{font-family:var(--sans);font-size:12px;font-weight:500;fill:var(--muted)}
+.cx-fig .rule{stroke:var(--line);stroke-width:1}
+.cx-rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.cx-rules .box{gap:6px;padding:12px 14px}
+.cx-rules .box h3{font-size:13.5px}
+.cx-rules .box p{font-size:12.5px}
+.cx-t{border-collapse:collapse;width:100%;font-size:12.5px}
+.cx-t th{text-align:left;font-weight:600;font-size:11.5px;color:var(--muted);padding:4px 12px 4px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.cx-t td{padding:7px 12px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.cx-t tr:last-child td{border-bottom:0}
+.cx-t td:first-child{white-space:nowrap;font-weight:600}
+.cx-t td:first-child code{font-size:12.5px;font-weight:700}
+.cx-tw{overflow-x:auto}
+.cx-l{margin:0;padding-left:1.2em;display:grid;gap:4px;font-size:12.5px}
+.cx-l li::marker{color:var(--muted)}
+.box .cx-l{color:var(--muted)}
+.cx-l a code{color:var(--ink)}
+.cx-src{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.cx-quote{margin:0;padding:10px 14px;border-left:2px solid var(--line);display:grid;gap:4px;font-size:12.5px}
+.cx-quote q{font-family:var(--mono);font-size:12px;quotes:none}
+.cx-quote span{color:var(--muted)}
+.cx-sum{margin:28px 0 0;padding-top:16px;border-top:1px solid var(--line);font-size:16px;line-height:1.75;max-width:72ch}
+.cx-sum strong{font-weight:700}
+.cx-sum .add{display:inline-block;margin-left:6px;vertical-align:middle}
+@media (max-width:900px){.cx-two{grid-template-columns:1fr}}
+@media (max-width:720px){
+  .wrap{padding:24px 14px 140px} h1{font-size:26px}
+  .board{padding:18px 14px}
+  .row,.conn{grid-template-columns:1fr;gap:6px}
+  .rail{padding-top:0;grid-auto-flow:column;justify-content:start;gap:8px}
+  .row + .row{margin-top:20px;padding-top:18px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{.cx-fig{overflow-x:visible}.cx-fig svg{min-width:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker"><a class="home" href="index.html">← 目次</a><span class="tag-doc">解説</span><span>Cursor プラグイン · cursor/plugins · pstack</span></div>
+  <h1>コンテキストの守り方<span class="sub">プレイブックを連ねても、Compaction に頼らずに進めるための規約</span></h1>
+  <p class="lead">プレイブックから別のプレイブックへ作業をつなぐと、1 つのチャットに手順書の本文、調べた結果、差分、ログが積もります。やがてコンテキストが埋まり、Compaction（自動要約）に入ります。pstack には、コンテキストの量を見張る仕組みも、自動で退避する仕組みもありません。代わりに、プレイブックとスキルの書き方で 3 つのことを決めています。<strong>メインチャットには判断と要約だけを置く。状態はファイルに置く。溢れそうなら区切って、新しいチャットに引き継ぐ。</strong></p>
+  <ul class="facts" aria-label="規模">
+    <li><b>0</b><span>コンテキストを見張るフック</span></li>
+    <li><b>4</b><span>完了通知をまとめて処理する箇所</span></li>
+    <li><b>3</b><span>Orchestrate の階層の段数</span></li>
+    <li><b>10</b><span>同時に動かす子の目安</span></li>
+  </ul>
+  <div class="meta"><a href="https://github.com/cursor/plugins/tree/main/pstack">cursor/plugins/pstack</a><span>2026-10-22 時点の main（d1453c1、v0.15.29）と git 履歴を読んで作成</span><span>3 つの柱の区切り、図 1〜3、最後のまとめは本文からの解釈</span></div>
+</header>
+<div class="toolbar">
+  <div class="legend"><span>小さな等幅の文字は出典のファイル名</span></div>
+  <button type="button" class="themebtn" id="cx-theme">表示: 自動</button>
+</div>
+
+<main class="board" id="cx-board">
+  <section class="row wide" aria-labelledby="cx-r1"><div class="rail" id="cx-r1">1 OVERVIEW<span class="jp">概要</span><span class="add">3 つの柱は解釈</span></div>
+    <div class="cx-body">
+      <div class="cx-two">
+        <div class="box amber"><h3>起きやすいこと<small>1 つのチャットに積もる</small></h3>
+          <p class="cx-def">プレイブックの手順は、同じチャットで別のプレイブックを開いたり、how や arena の結果を受け取ったりしながら進みます。手順書の本文、調べた結果、差分、CI のログが同じコンテキストに積もるので、作業が長いほど Compaction に入りやすくなります。</p>
+          <div class="cx-k">pstack の見方</div>
+          <p>原則 guard-the-context-window は、溢れたときの害を「推論の質が落ち、圧縮による欠落が生まれ、作業が止まる」と書いています（<code>Context overflow degrades reasoning quality, creates compression artifacts, and halts progress.</code>）。Compaction は頼る先ではなく、避ける対象です。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/principle-guard-the-context-window/SKILL.md">principle-guard-the-context-window/SKILL.md</a></p>
+        </div>
+        <div class="box blue"><h3>pstack の答え<small>仕組みではなく書き方の規約</small></h3>
+          <p class="cx-def">プラグインに入っているのは、スキル（Markdown）、エージェントの定義、補助スクリプトだけです。<code>plugin.json</code> にフックの定義はなく、コンテキストの量を測る処理もありません。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/.cursor-plugin/plugin.json">plugin.json</a></p>
+          <div class="cx-k">規約の 3 つの柱</div>
+          <ol class="cx-l">
+            <li>メインチャットには判断と要約だけを置き、生データはサブエージェントが読む（2）</li>
+            <li>状態はファイルに置き、読み出しを短くする（3、4）</li>
+            <li>溢れそうなら Compaction の前に区切り、新しいチャットで再開する（5）</li>
+          </ol>
+        </div>
+      </div>
+      <p>プレイブックからプレイブックを呼ぶための実行時の仕組みはありません。本文が別のファイルを指しているだけなので、同じチャットで呼ぶときのコストは、そのファイルを読む分です。呼び方は 3 通りあり、どれも同じチャットに手順を積み上げない形になっています。</p>
+      <div class="cx-tw"><table class="cx-t">
+        <tr><th>形</th><th>例</th><th>コンテキストへの影響</th></tr>
+        <tr><td>引き継ぎ</td><td>Session pickup から該当プレイブックへ。Trace forensics から Bug fix か Perf issue へ</td><td>呼んだ側はそこで終わる（<code>The pickup playbook ends here. The routed playbook owns the rest.</code>） <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/session-pickup.md">session-pickup.md</a> <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/trace-forensics.md">trace-forensics.md</a></td></tr>
+        <tr><td>末尾で実行</td><td>各プレイブックの最後に Opening a PR</td><td>PR を開くだけで、Babysit のループは始めない（<code>Opening a PR does not start a babysit.</code>） <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/opening-a-pr.md">opening-a-pr.md</a></td></tr>
+        <tr><td>別のエージェント</td><td>Autopilot-full では、PR ごとのオーナー（cloud agent）が Opening a PR、Babysit、merge まで回す。Orchestrate では babysitter を 1 スタックに 1 体置く</td><td>ループ全体が別のコンテキストで回る。親に届くのは head SHA や merge-ready などの報告だけ <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/autopilot-full.md">autopilot-full.md</a> <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></td></tr>
+      </table></div>
+      <blockquote class="cx-quote">
+        <q>The chat that receives /poteto-mode runs the playbook. Never spawn a poteto-agent to run the playbook itself.</q>
+        <span>/poteto-mode を受けたチャットがプレイブックを実行する。プレイブックそのものを poteto-agent に回さない。 <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">poteto-mode/SKILL.md</a></span>
+      </blockquote>
+      <p>最上位の手順はメインチャットに残ります。そのチャットを軽く保つことが、以下の規約すべての前提です。<span class="add">解釈</span></p>
+    </div>
+  </section>
+
+  <section class="row wide" aria-labelledby="cx-r2"><div class="rail" id="cx-r2">2 WHERE<span class="jp">情報の置き場所</span><span class="add">図は解釈</span></div>
+    <div class="cx-body">
+      <p>情報の置き場所は、メインチャット、作業ごとに起動するサブエージェント、コンテキストの外にあるディスクの 3 か所です。境界をまたいでよいものは、規則で決まっています。</p>
+      <figure class="cx-fig">
+<svg viewBox="0 0 960 440" role="img" aria-labelledby="cx-a-title cx-a-desc">
+<title id="cx-a-title">情報の置き場所と、境界をまたぐもの</title>
+<desc id="cx-a-desc">メインチャット、作業ごとに起動するサブエージェント、コンテキストの外にあるディスクの 3 か所。メインチャットからサブエージェントへはパスで書いた brief を渡し、サブエージェントからは定型の報告だけが戻る。メインチャットはディスクの状態を読み書きし、サブエージェントは push、台帳の行、報告ファイルをディスクに書く。</desc>
+<defs><marker id="cx-a-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto-start-reverse"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker></defs>
+<line class="e" x1="408" y1="112" x2="550" y2="112" marker-end="url(#cx-a-arrow)"/>
+<text class="lt" x="480" y="100" text-anchor="middle">brief（パスで渡す）</text>
+<line class="e d" x1="552" y1="168" x2="410" y2="168" marker-end="url(#cx-a-arrow)"/>
+<text class="lt" x="480" y="188" text-anchor="middle">定型の報告</text>
+<text class="lt" x="480" y="206" text-anchor="middle">PASS・ISSUES・SHA</text>
+<line class="e" x1="216" y1="246" x2="216" y2="314" marker-start="url(#cx-a-arrow)" marker-end="url(#cx-a-arrow)"/>
+<text class="lt" x="228" y="284">状態の読み書き</text>
+<line class="e" x1="744" y1="244" x2="744" y2="314" marker-end="url(#cx-a-arrow)"/>
+<text class="lt" x="756" y="284">push・台帳・報告</text>
+<rect class="zn main" x="24" y="32" width="384" height="212" rx="8"/>
+<text class="zt a" x="40" y="58">メインチャット</text>
+<text class="nj" x="40" y="76">/poteto-mode を受け、手順書を実行する</text>
+<text class="nt" x="40" y="112">ルーターと手順書</text>
+<text class="ns" x="40" y="130">poteto-mode/SKILL.md · playbooks/*.md</text>
+<text class="nt" x="40" y="170">持つのは判断・要約・ポインタ</text>
+<text class="ns" x="40" y="188">principle-guard-the-context-window</text>
+<text class="nj" x="40" y="226">手順書は一致したものだけを開く</text>
+<rect class="zn sub" x="552" y="32" width="384" height="212" rx="8"/>
+<text class="zt" x="568" y="58">サブエージェント</text>
+<text class="nj" x="568" y="76">作業ごとに新しく起動する</text>
+<text class="nt" x="568" y="112">実装・調査の委譲先</text>
+<text class="ns" x="568" y="130">agents/poteto-agent.md</text>
+<text class="nt" x="568" y="170">並列ワーカー・調査役</text>
+<text class="ns" x="568" y="188">swarm · arena · how · why · recall</text>
+<text class="nj" x="568" y="226">生ログ・トランスクリプト・トレースはここで読み切る</text>
+<rect class="zn disk" x="24" y="316" width="912" height="108" rx="8"/>
+<text class="zt" x="40" y="342">ディスク</text>
+<text class="nj" x="100" y="342">コンテキストの外。チャットが終わっても残る</text>
+<text class="nt" x="40" y="376">git</text>
+<text class="nj" x="40" y="396">ブランチ・PR・コミット</text>
+<text class="nt" x="268" y="376">Orchestrate の表</text>
+<text class="ns" x="268" y="394">units.tsv · ledger.tsv …</text>
+<text class="nj" x="268" y="412">orch.ts が 1 行で返す</text>
+<text class="nt" x="496" y="376">判断ログ</text>
+<text class="ns" x="496" y="394">decisions.tsv</text>
+<text class="ns" x="496" y="412">show-me-your-work</text>
+<text class="nt" x="724" y="376">計画書・再開メモ</text>
+<text class="ns" x="724" y="394">multi-phase-plan.md</text>
+<text class="ns" x="724" y="412">pause-safely.md</text>
+</svg>
+        <figcaption>図 1　情報の置き場所と、境界をまたぐもの。矢印のラベルは、ルーターの Subagents 節と各プレイブック、スキルの規則をまとめたもの。</figcaption>
+      </figure>
+      <div class="cx-rules">
+        <div class="box"><h3>パスで渡す</h3><p>サブエージェントを起動するときの既定は <code>file pointers not inlined context</code> です。下調べの結果も、中身を貼らずにファイルの場所で渡します。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">poteto-mode/SKILL.md</a></p></div>
+        <div class="box"><h3>生の出力は貼らない</h3><p>swarm は結果をまとめるときに <code>Do not paste raw worker dumps.</code> と定めています。multi-phase-plan の探索役が返すのは、ファイルの場所、規約、テストコマンド、入口だけです（<code>No inlined dumps.</code>）。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/swarm/SKILL.md">swarm/SKILL.md</a> <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/multi-phase-plan.md">multi-phase-plan.md</a></p></div>
+        <div class="box"><h3>生データは子が読む</h3><p>長いトランスクリプト（Session pickup）、大きなプロファイル（Trace / Runtime forensics）、過去のチャット（recall）は、サブエージェントが読みます。メインに残すのは縮めた結論だけです。recall は <code>The raw transcripts stay in the subagents.</code> と書いています。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/session-pickup.md">session-pickup.md</a> <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/trace-forensics.md">trace-forensics.md</a> <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/recall/SKILL.md">recall/SKILL.md</a></p></div>
+        <div class="box"><h3>まとめ役も子に任せる</h3><p>how と why は、調べる役だけでなく、結果を 1 つにまとめる役（explainer、synthesizer）もサブエージェントに任せます。親は返ってきた説明を提示するだけです。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/how/SKILL.md">how/SKILL.md</a> <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/why/SKILL.md">why/SKILL.md</a></p></div>
+        <div class="box"><h3>毎回新しく起動する</h3><p>修正のやり直し、追加作業、リトライ、キューの次の項目は、新しいサブエージェントに任せます。そのとき、元の brief、その後の指示すべて、前任の報告とブランチをまとめて渡します（consolidated scope）。既存のエージェントを再開するのは、チェックアウトや dev server のように、移しにくい状態がそこにあるときだけです。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">poteto-mode/SKILL.md</a></p></div>
+        <div class="box"><h3>手順書は一致したものだけ開く</h3><p>ルーターに載っているのは、1 行ずつの索引です。手順の全文は、一致したプレイブックのファイルを開いて読みます。原則の本文も、その原則を適用するときにだけ読みます。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">poteto-mode/SKILL.md</a></p></div>
+      </div>
+      <blockquote class="cx-quote">
+        <q>Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary.</q>
+        <span>割り込みで再開を重ねると、指示が黙って抜け落ちる。「完了」という要約を信じず、範囲をまとめ直した新しいサブエージェントを起動する。 <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">poteto-mode/SKILL.md</a></span>
+      </blockquote>
+      <p>長く動いたエージェントの要約を自動処理に任せず、残す要点を親が書き直して、新しいコンテキストで始め直す方式です。手動の Compaction と言えます。何を残すかを親が選べる点が、自動要約との違いです。<span class="add">解釈</span>　Claude Code 向けの読み替えでも、<code>resume</code> は「新しいエージェントを起動し、前の結果を brief に貼る」になっています。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/docs/harness/claude-code.md">claude-code.md</a></p>
+    </div>
+  </section>
+
+  <section class="row wide" aria-labelledby="cx-r3"><div class="rail" id="cx-r3">3 DISK<span class="jp">状態はファイルに置く</span></div>
+    <div class="cx-body">
+      <p>コンテキストが消えても作業が消えないように、続きに要る状態はファイルに書きます。Orchestrate では、どのファイルにも書き手が 1 人だけいます（<code>Every file has exactly one writer.</code>）。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></p>
+      <div class="cx-tw"><table class="cx-t">
+        <tr><th>ファイル</th><th>中身</th><th>使い方</th></tr>
+        <tr><td><code>preferences.md</code></td><td>常設の命令（standing orders）。1 行に 1 つの制約</td><td>spawn と resume のたびに渡す。再開を重ねると指示が薄れていくため（<code>Directives decay across resumes</code>）。同じ指示を 2 回書きそうになったら、行を足す <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></td></tr>
+        <tr><td><code>units.tsv</code></td><td>作業単位ごとの状態、ブランチ、PR、head SHA</td><td>行をその場で書き換える <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></td></tr>
+        <tr><td><code>ledger.tsv</code></td><td>検証の判定。PR と head SHA の組ごとに 1 行</td><td>「検証済みか」には、記憶でも transcript でもなく台帳が答える <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></td></tr>
+        <tr><td><code>inbox/</code></td><td>完了通知のポインタ</td><td>報告の本文ではなく、報告ファイルのパスを積む（<code>--report PATH</code>） <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/scripts/orch/orch.ts">orch.ts</a></td></tr>
+        <tr><td><code>status.md</code></td><td>今の状況</td><td>表から作り直す。出来事を書き足していかない <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></td></tr>
+        <tr><td><code>decisions.tsv</code></td><td>判断ログ。1 行に 1 つの判断</td><td>根拠は文章ではなくポインタで書く（<code>Evidence is a pointer, not prose.</code>） <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/show-me-your-work/SKILL.md">show-me-your-work/SKILL.md</a></td></tr>
+        <tr><td>計画書</td><td>複数の PR にまたがる計画</td><td>実行中は、ティックのたびに手順書を trunk から読み直す <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/multi-phase-plan.md">multi-phase-plan.md</a></td></tr>
+        <tr><td>再開メモ</td><td>中断したときの状態と、再開したら最初にやること</td><td><code>/tmp/&lt;slug&gt;-resume.md</code> などに書く。判断ログがあれば、写さずにそれを指す <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/pause-safely.md">pause-safely.md</a></td></tr>
+      </table></div>
+      <div class="cx-rules">
+        <div class="box"><h3>読み出しを 1 行にする<small>orch.ts</small></h3><p>Orchestrate の状態は、orch という CLI を通して読み書きします。決まりは <code>one command in and one line out</code> です。追加したとき（<a class="cx-src" href="https://github.com/cursor/plugins/commit/99559f2f52047978602ef365589275831e76af07">99559f2</a>、#187）の文面には、この後に <code>to conserve context</code>（コンテキストを節約するため）と理由が書かれていました。今の文面からは、この句が削られています。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></p><p>実装も短く返します。一覧は 4 行で切って残りを <code>... N more; use --json</code> とし、<code>orch status</code> は counts、changed、gates open の 3 行だけを出します。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/scripts/orch/orch.ts">orch.ts</a></p></div>
+        <div class="box"><h3>要約された後も同じ run<small>show-me-your-work</small></h3><p>判断ログは、1 つの run を <code>one agent conversation, including its later turns and any summary of it</code> と定めています。要約された後の会話も、同じ run です。後のターンで戻ってきた run は、まずログの末尾を読んで、他の run が書き足していないかを確かめます。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/show-me-your-work/SKILL.md">show-me-your-work/SKILL.md</a></p></div>
+        <div class="box"><h3>決まった処理はスクリプトに<small>watch-pr · sqlite</small></h3><p>PR の状態は、watch-pr が READY、WAITING、BLOCKER などの判定を JSON で返します。トレースは sqlite に入れてから問い合わせます（<code>Reach the queryable shape before you read.</code>）。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/babysit.md">babysit.md</a> <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/trace-forensics.md">trace-forensics.md</a></p><p>CI のログやトレースの生データを、エージェントが何度も読まずに済みます。<span class="add">解釈</span></p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="row wide" aria-labelledby="cx-r4"><div class="rail" id="cx-r4">4 SCALE<span class="jp">規模ごとの体制</span><span class="add">図は解釈</span></div>
+    <div class="cx-body">
+      <p>どこまで分けるかは、規模で変わります。1 体で終わる作業はチャット内のプレイブックか Autonomous run に、PR の列は Autopilot に回します。Orchestrate を使うのは、エージェント 1 体の寿命を超える作業のときだけです（<code>Route here when the work outlives any single agent.</code>）。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></p>
+      <figure class="cx-fig">
+<svg viewBox="0 0 960 420" role="img" aria-labelledby="cx-b-title cx-b-desc">
+<title id="cx-b-title">規模ごとの体制と、親に戻る情報</title>
+<desc id="cx-b-desc">1 チャットで完結する作業では、リードが poteto-agent などに作業を任せ、diff と報告を受け取る。PR のキューでは、ルートが PR ごとのオーナーと検証 swarm を起動し、head SHA と状態、PASS と ISSUES を受け取る。長期プログラムでは、コーディネーターが必要なときだけ track ごとの sub-coordinator を置き、その下の worker と verifier の報告は 1 体 1 行に要約されて戻る。</desc>
+<defs><marker id="cx-b-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker></defs>
+<text class="lt" x="24" y="30">点線の矢印＝親に戻る情報</text>
+<text class="zt a" x="266" y="30" text-anchor="middle">メインチャット</text>
+<text class="zt" x="554" y="30" text-anchor="middle">子エージェント</text>
+<text class="zt" x="844" y="30" text-anchor="middle">孫エージェント</text>
+<line class="rule" x1="24" y1="132" x2="936" y2="132"/>
+<line class="rule" x1="24" y1="308" x2="936" y2="308"/>
+<line class="e d" x1="464" y1="84" x2="358" y2="84" marker-end="url(#cx-b-arrow)"/>
+<text class="lt" x="410" y="72" text-anchor="middle">diff・報告</text>
+<line class="e d" x1="464" y1="180" x2="358" y2="180" marker-end="url(#cx-b-arrow)"/>
+<text class="lt" x="410" y="168" text-anchor="middle">head SHA・状態</text>
+<line class="e d" x1="464" y1="260" x2="358" y2="260" marker-end="url(#cx-b-arrow)"/>
+<text class="lt" x="410" y="248" text-anchor="middle">PASS・ISSUES</text>
+<line class="e d" x1="752" y1="362" x2="646" y2="362" marker-end="url(#cx-b-arrow)"/>
+<text class="lt" x="698" y="350" text-anchor="middle">定型の報告</text>
+<line class="e d" x1="464" y1="362" x2="358" y2="362" marker-end="url(#cx-b-arrow)"/>
+<text class="lt" x="410" y="350" text-anchor="middle">1 体 1 行に要約</text>
+<text class="nt" x="24" y="80">1 チャットで完結</text>
+<text class="ns" x="24" y="98">feature.md など</text>
+<text class="nt" x="24" y="216">PR のキュー</text>
+<text class="ns" x="24" y="234">autopilot-*.md</text>
+<text class="nt" x="24" y="358">長期プログラム</text>
+<text class="ns" x="24" y="376">orchestrate.md</text>
+<rect class="n" x="176" y="52" width="180" height="64" rx="6"/>
+<text class="nt" x="192" y="78">リード</text>
+<text class="nj" x="192" y="98">設計を決め diff を読む</text>
+<rect class="n w" x="464" y="52" width="180" height="64" rx="6"/>
+<text class="nt" x="480" y="78">poteto-agent ほか</text>
+<text class="nj" x="480" y="98">作業ごとに新規</text>
+<rect class="n" x="176" y="148" width="180" height="144" rx="6"/>
+<text class="nt" x="192" y="204">ルート</text>
+<text class="nj" x="192" y="224">判定（verdict）を持つ</text>
+<text class="nj" x="192" y="242">PR は持たない</text>
+<rect class="n w" x="464" y="148" width="180" height="64" rx="6"/>
+<text class="nt" x="480" y="174">PR オーナー × N</text>
+<text class="nj" x="480" y="194">build から merge まで</text>
+<rect class="n w" x="464" y="228" width="180" height="64" rx="6"/>
+<text class="nt" x="480" y="254">検証 swarm</text>
+<text class="nj" x="480" y="274">コードを書いていない側</text>
+<rect class="n" x="176" y="324" width="180" height="76" rx="6"/>
+<text class="nt" x="192" y="350">コーディネーター</text>
+<text class="nj" x="192" y="370">コードを書かない</text>
+<text class="nj" x="192" y="388">レビューは verifier へ</text>
+<rect class="n w opt" x="464" y="324" width="180" height="76" rx="6"/>
+<text class="nt" x="480" y="350">sub-coordinator</text>
+<text class="nj" x="480" y="370">track ごと・必要時だけ</text>
+<rect class="n w" x="752" y="324" width="184" height="76" rx="6"/>
+<text class="nt" x="768" y="350">worker / verifier</text>
+<text class="nj" x="768" y="370">cloud で実行</text>
+</svg>
+        <figcaption>図 2　規模ごとの体制と、親に戻る情報。点線枠の sub-coordinator は必要なときだけ置く。下の段ほど、メインチャットが自分で読むものは減る。</figcaption>
+      </figure>
+      <p>Orchestrate のコーディネーターは何日も動き続けるので、1 ターンを小さく保つための決まりが細かく書かれています。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></p>
+      <div class="cx-rules">
+        <div class="box"><h3>完了通知はキューに積む</h3><p><code>Completions are queue events, not interrupts.</code> 通知が来たら <code>orch inbox push</code> を実行して、元の作業に戻ります。その場で中身を読み込まず（<code>Never deep-review inline.</code>）、レビューが要るものは verifier の作業単位にします。</p></div>
+        <div class="box"><h3>まとめて処理するのは 4 か所</h3><p>溜まった通知を処理（drain）するのは、作業の区切り、track のまとめ、frontier の見張りに起こされたとき、人への報告の前の 4 か所だけです。drain のターンは <code>orch status</code> の 3 行で終え、詳細は <code>status.md</code> に任せます。</p></div>
+        <div class="box"><h3>中間層は必要になってから</h3><p>sub-coordinator は、1 回の drain で捌けない規模になってから置きます。層を挟むたびに、状況をつかむための前置きを払い直すからです（<code>Each nested layer re-pays a full orientation preamble</code>）。階層は 3 段まで、同時に動かす子は 1 回の drain で処理できる 10 体ほどです。</p></div>
+        <div class="box"><h3>子の報告は 1 体 1 行に</h3><p>sub-coordinator は、子の報告を生のまま上に渡しません（<code>Never forwards raw child reports.</code>）。子ごとに name、status、PR、head SHA、verdict と 1 行の説明にまとめます。</p></div>
+        <div class="box"><h3>変化がなければ黙る</h3><p>multi-phase-plan が定める定期チェック（ティック）では、表や変わらない障害を繰り返し書きません。何も見つからなければ、返信を書かずにターンを終えます（<code>If the audit found none, end the turn with no reply text.</code>）。Autopilot-full でも、何も変わらなかったティックは黙ります。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/multi-phase-plan.md">multi-phase-plan.md</a> <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/autopilot-full.md">autopilot-full.md</a></p></div>
+        <div class="box"><h3>brief も単位に合わせる</h3><p>2 行の修正に 4 KB の指示書を付けると、修正そのものより、書くのも従うのも高くつきます（<code>A 4KB scaffold around a two-line edit costs more to write and obey than the edit.</code>）。1 コマンドで済む単位なら、指示書を 1 段落に縮めます。</p></div>
+      </div>
+      <p>一晩に何十回も回るティックや drain のたびに、同じ状況報告や子の生の報告がメインチャットに積もるのを防ぐ決まりです。<span class="add">解釈</span></p>
+    </div>
+  </section>
+
+  <section class="row wide" aria-labelledby="cx-r5"><div class="rail" id="cx-r5">5 PAUSE<span class="jp">区切りと再開</span><span class="add">図は解釈</span></div>
+    <div class="cx-body">
+      <p>それでも溢れそうなときは、Compaction を待たずに区切ります。ルーターは Pause safely を起動する条件として、明示の中断、オフライン、Cursor の再起動と並べて <code>imminent context compaction</code> を挙げています。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md">poteto-mode/SKILL.md</a></p>
+      <figure class="cx-fig">
+<svg viewBox="0 0 960 400" role="img" aria-labelledby="cx-c-title cx-c-desc">
+<title id="cx-c-title">溢れる前に区切り、新しいチャットで再開する</title>
+<desc id="cx-c-desc">チャット A の Pause safely が、wip コミット、再開メモ、判断ログへのポインタをディスクに書き出す。空のコンテキストで始めたチャット B の Session pickup がそれを読み込み、長い記録はサブエージェントに渡して縮めた時系列だけを受け取り、残りの作業を該当プレイブックに引き継ぐ。</desc>
+<defs><marker id="cx-c-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker></defs>
+<line class="e" x1="216" y1="188" x2="294" y2="188" marker-end="url(#cx-c-arrow)"/>
+<text class="lt" x="256" y="176" text-anchor="middle">書き出す</text>
+<line class="e" x1="472" y1="188" x2="550" y2="188" marker-end="url(#cx-c-arrow)"/>
+<text class="lt" x="512" y="176" text-anchor="middle">読み込む</text>
+<line class="e" x1="736" y1="188" x2="790" y2="188" marker-end="url(#cx-c-arrow)"/>
+<line class="e" x1="613" y1="288" x2="613" y2="334" marker-end="url(#cx-c-arrow)"/>
+<text class="lt" x="603" y="323" text-anchor="end">記録のパス</text>
+<line class="e d" x1="675" y1="336" x2="675" y2="290" marker-end="url(#cx-c-arrow)"/>
+<text class="lt" x="685" y="323">縮めた時系列</text>
+<rect class="zn" x="16" y="24" width="216" height="280" rx="8"/>
+<text class="zt" x="32" y="50">チャット A</text>
+<text class="nj" x="32" y="68">作業が長くなったチャット</text>
+<rect class="zn" x="536" y="24" width="416" height="280" rx="8"/>
+<text class="zt" x="552" y="50">チャット B</text>
+<text class="nj" x="552" y="68">空のコンテキストで始める</text>
+<rect class="n" x="32" y="88" width="184" height="200" rx="6"/>
+<text class="nt" x="48" y="114">Pause safely</text>
+<text class="ns" x="48" y="132">pause-safely.md</text>
+<text class="nj" x="48" y="164">1 区切りで止める</text>
+<text class="nj" x="48" y="186">2 不可逆な操作はしない</text>
+<text class="nj" x="48" y="208">3 wip: でコミット</text>
+<text class="nj" x="48" y="230">4 再開メモをファイルへ</text>
+<text class="nj" x="48" y="262">判断ログは指すだけ</text>
+<rect class="n f" x="296" y="88" width="176" height="200" rx="6"/>
+<text class="nt" x="312" y="114">ディスク</text>
+<text class="nj" x="312" y="132">チャットをまたいで残る</text>
+<text class="nj" x="312" y="164">wip コミット</text>
+<text class="ns" x="312" y="180">git</text>
+<text class="nj" x="312" y="204">再開メモ</text>
+<text class="ns" x="312" y="220">/tmp/&lt;slug&gt;-resume.md</text>
+<text class="nj" x="312" y="244">判断ログ</text>
+<text class="ns" x="312" y="260">decisions.tsv</text>
+<rect class="n" x="552" y="88" width="184" height="200" rx="6"/>
+<text class="nt" x="568" y="114">Session pickup</text>
+<text class="ns" x="568" y="132">session-pickup.md</text>
+<text class="nj" x="568" y="164">1 前の記録を読む</text>
+<text class="nj" x="568" y="184">2 状態を復元する</text>
+<text class="nj" x="568" y="204">3 済みと未済を比べる</text>
+<text class="nj" x="568" y="224">4 手順書へ引き継ぐ</text>
+<text class="nj" x="568" y="244">5 主張を実物で確かめる</text>
+<text class="nj" x="568" y="272">やり直しはしない</text>
+<rect class="n" x="792" y="156" width="152" height="64" rx="6"/>
+<text class="nt" x="808" y="182">該当プレイブック</text>
+<text class="nj" x="808" y="202">残りを担当する</text>
+<rect class="n w" x="552" y="336" width="184" height="56" rx="6"/>
+<text class="nt" x="568" y="360">サブエージェント</text>
+<text class="nj" x="568" y="378">長い記録を読んで縮める</text>
+<text class="nj" x="24" y="338">起動条件：明示の指示・オフライン・</text>
+<text class="nj" x="24" y="356">Cursor 再起動・Compaction 直前</text>
+<text class="nj" x="24" y="374">直前かどうかを pstack は検知しない</text>
+<text class="nj" x="304" y="338">初版の理由：会話内の計画は</text>
+<text class="nj" x="304" y="356">要約を越えて残らない</text>
+</svg>
+        <figcaption>図 3　Pause safely で区切り、新しいチャットの Session pickup で再開する流れ。チャットをまたいで残るのはディスクだけ。</figcaption>
+      </figure>
+      <div class="cx-two">
+        <div class="box"><h3>Pause safely<small>pause-safely.md</small></h3>
+          <ol class="cx-l">
+            <li>安全な区切りで止める。今の手順を終えるか取り消し、入れ子のサブエージェントも止める</li>
+            <li>止めるために不可逆な操作をしない。PR や push は、すでに出していた場合だけ</li>
+            <li>未コミットの編集を 1 つの <code>wip:</code> コミットにする</li>
+            <li>再開メモをコンテキストの外に書く。Compaction が理由のときは <code>/tmp/&lt;slug&gt;-resume.md</code> などのファイルに書き、判断ログがあればそれを指す</li>
+          </ol>
+          <p>明示の指示でだけ動きます。「keep going」「going to bed, keep going」と言われたら止まりません。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/pause-safely.md">pause-safely.md</a></p>
+        </div>
+        <div class="box"><h3>Session pickup<small>session-pickup.md</small></h3>
+          <ol class="cx-l">
+            <li>前の記録を探して読む。長いトランスクリプトはサブエージェントで読み、縮めた時系列だけをメインに残す</li>
+            <li>ブランチ、着地済みの変更、残りの todo、決めたことから状態を組み立て直す</li>
+            <li>済みと未済を比べて再開点を決める。前の再現や完了済みの作業はやり直さない</li>
+            <li>残りの作業を該当プレイブックに渡す。pickup の手順はここで終わる</li>
+            <li>引き継いだ主張を、元のゴールに照らして実物で確かめる</li>
+          </ol>
+          <p>前の記録は正しい入力として扱い、一から導き直そうとしません（<code>The prior trail is authoritative input. Resist the bias to re-derive it.</code>）。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/session-pickup.md">session-pickup.md</a></p>
+        </div>
+      </div>
+      <blockquote class="cx-quote">
+        <q>For the compaction trigger write it to a file like /tmp/&lt;slug&gt;-resume.md, because the in-context plan won't survive summarization.</q>
+        <span>Compaction が理由のときは、/tmp/&lt;slug&gt;-resume.md のようなファイルに書く。会話の中にある計画は、要約を越えて残らないから。Pause safely を追加したときの文面で（<a class="cx-src" href="https://github.com/cursor/plugins/commit/2f3a47e6c404daa4bd24e8a0686751be39ed889b">2f3a47e</a>、#115）、理由の部分はのちの簡潔化（<a class="cx-src" href="https://github.com/cursor/plugins/commit/e8d856f0273b42ebafe0ec3546bd645709e7c1b0">e8d856f</a>、#329）で削られた。</span>
+      </blockquote>
+      <p>Orchestrate のコーディネーターも、作り直せる前提で書かれています。Cursor を再起動した後は、standing orders と <code>units.tsv</code> を読み直し、frontier を計算し直し、cloud の作業をエージェント ID ではなく PR とブランチで付け直します。ツールの失敗が続いたときは、終わったこと、置き場所、再開のコマンドをファイルに書いて終わります。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md">orchestrate.md</a></p>
+    </div>
+  </section>
+
+  <section class="row wide" aria-labelledby="cx-r6"><div class="rail" id="cx-r6">6 LIMITS<span class="jp">限界と使い方</span></div>
+    <div class="cx-body">
+      <div class="cx-two">
+        <div class="box"><h3>限界</h3>
+          <ul class="cx-l">
+            <li>どれも文章で書かれた規約で、守らせる仕組みはありません。守るかどうかはモデル次第です。</li>
+            <li>Pause safely には <code>This is explicit only.</code> と書かれています。Compaction が近いことを pstack は検知しません。誰が「直前」と判断するのかも、本文には書かれていません。</li>
+            <li>サブエージェントの最終報告は、Task の戻り値として親のコンテキストに入ります。arena の候補比較（<code>Read every candidate end to end before picking.</code>）や Feature の diff レビューのように、リードが自分で読む段は親に積もります。中身を読まない役に徹するのは、Orchestrate のコーディネーターだけです。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/skills/arena/SKILL.md">arena/SKILL.md</a></li>
+            <li>原則ファイルの本文は <code>Size phases and cap scope.</code> で始まる 1 行だけです。初版にあった <code>Isolate large payloads.</code> などは、書かなくてもエージェントが従うとして <a class="cx-src" href="https://github.com/cursor/plugins/commit/b0b9c7a0baf8b6aa1d00bf77d4101e577d4ba411">b0b9c7a</a>（#419）と <a class="cx-src" href="https://github.com/cursor/plugins/commit/08bd59b37834550f5e8fa0bb5e8852204a7534cf">08bd59b</a>（#571）で削られました。具体策は、ルーターと各手順の側に書かれています。</li>
+          </ul>
+        </div>
+        <div class="box"><h3>使う側の運用<small>docs/guide</small></h3>
+          <ul class="cx-l">
+            <li>話題を変えるときは <code>new task</code> と書きます。長いチャットには前の作業の文脈が溜まっているからです（<code>A long chat accumulates context from the last task.</code>）。調査の結論が出て修正に移るときも、修正を新しいタスクとして始めます。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/docs/guide/02-poteto-mode.md">02-poteto-mode.md</a> <a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/docs/guide/03-understand.md">03-understand.md</a></li>
+            <li><code>/poteto-mode</code> は Custom Mode で起動します。毎ターン、指示がコンテキストに残ります。Enter で 1 回付けただけだと、チャットが進むにつれて薄れます（<code>it fades as the chat moves on</code>）。<a class="cx-src" href="https://github.com/cursor/plugins/blob/main/pstack/docs/guide/01-setup.md">01-setup.md</a></li>
+          </ul>
+          <div class="cx-k">読む順番</div>
+          <ol class="cx-l">
+            <li><a href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md"><code>skills/poteto-mode/SKILL.md</code></a> の Subagents 節。図 1 の規則がまとまっている</li>
+            <li><a href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/pause-safely.md"><code>pause-safely.md</code></a> と <a href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/session-pickup.md"><code>session-pickup.md</code></a>。どちらも 10 行ほどで、図 3 の全体</li>
+            <li><a href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/autopilot-full.md"><code>autopilot-full.md</code></a>。図 2 の中段</li>
+            <li><a href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/playbooks/orchestrate.md"><code>orchestrate.md</code></a> と <a href="https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/scripts/orch/orch.ts"><code>orch.ts</code></a>。図 2 の下段と、図 1 のディスクにある表</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="cx-sum"><strong>一言で。</strong>pstack は、コンテキストの量を仕組みで見張りません。メインチャットには判断と要約だけを置き、生データは毎回新しいサブエージェントに読ませ、続きに要る状態はファイルに書きます。それでも溢れそうなら、Compaction の要約に任せず、自分で区切って新しいチャットに引き継ぎます。<span class="add">解釈</span></p>
+</main>
+<p class="note">このページは、コンテキストと Compaction の扱いに関わる記述を、ルーター、プレイブック、スキル、スクリプト、ガイド、git 履歴から集めて並べ直したものです。3 つの柱と図 1〜3 はこのページの整理で、本文にこの区切りがあるわけではありません。プレイブックの中身は <a href="pstack-playbooks.html">pstack のプレイブック</a>、サブエージェントの並列起動は <a href="pstack-playbook-fanout.html">プレイブックと fan out</a> で扱っています。</p>
+</div>
+<script>
+const tb=document.getElementById('cx-theme'),modes=['auto','light','dark'],lbl={auto:'自動',light:'ライト',dark:'ダーク'};let m=0;
+tb.addEventListener('click',()=>{m=(m+1)%3;const v=modes[m];if(v==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=v;tb.textContent='表示: '+lbl[v]});
+</script>
+</body>
+</html>
