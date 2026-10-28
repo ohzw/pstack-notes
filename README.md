@@ -9,7 +9,7 @@ Cursor プラグイン [pstack](https://github.com/cursor/plugins/tree/main/psta
 | [`index.html`](index.html) | 目次 |
 | [`pstack-skeleton.html`](pstack-skeleton.html) | 全体構成図。ルーター・23 プレイブック・並列起動スキル・葉スキルと原則・出荷の 5 段。項目を押すと参照関係を表示 |
 | [`pstack-playbook-fanout.html`](pstack-playbook-fanout.html) | プレイブックと fan out（サブエージェントの並列起動）の関係。並列起動スキルに共通する 4 段、9 スキルの並列化と集約の方法、orchestrate との違い |
-| [`pstack-playbooks.html`](pstack-playbooks.html) | プレイブック 23 本に共通する 5 つの部品と 7 つの考え方 |
+| [`pstack-playbooks.html`](pstack-playbooks.html) | プレイブック 23 本に共通する 5 つの部品と 7 つの考え方。スキルとの境目と、新規リポジトリのセットアップでの当てはめ例 |
 | [`pstack-review.html`](pstack-review.html) | レビュー体制。5 段の検査の起動条件と合格基準、/interrogate、Bugbot の仕分け、独立検証の判定 |
 | [`pstack-models.html`](pstack-models.html) | モデル割り当て。/setup-pstack の 17 の役割と既定モデル、混成パネル、推論予算、Claude Code での読み替え、割り当て例 |
 | [`pstack-context.html`](pstack-context.html) | コンテキストの守り方。プレイブックを連ねる長い作業で Compaction に頼らないための規約。情報の置き場所、状態をファイルに置く仕組み、規模ごとの体制、Pause safely と Session pickup による引き継ぎ、限界と読む順番 |
